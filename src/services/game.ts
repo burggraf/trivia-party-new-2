@@ -89,19 +89,29 @@ class GameServiceImpl implements GameService {
   // Question Management
   async getAvailableCategories(): Promise<string[]> {
     try {
-      // Simple direct query to get distinct categories
+      // Use RPC function to get distinct categories efficiently
       const { data, error } = await supabase
-        .from('questions')
-        .select('category')
-        .limit(1000); // Limit to reduce data transfer
+        .rpc('get_distinct_categories');
 
       if (error) {
-        throw error;
+        console.error('RPC error, falling back to direct query:', error);
+
+        // Fallback to direct query with distinct
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('questions')
+          .select('category')
+          .limit(100);
+
+        if (fallbackError) {
+          throw fallbackError;
+        }
+
+        // Extract unique categories client-side as fallback
+        const categories = [...new Set(fallbackData.map(item => item.category))].sort();
+        return categories;
       }
 
-      // Extract unique categories
-      const categories = [...new Set(data.map(item => item.category))].sort();
-      return categories;
+      return data || [];
     } catch (error) {
       console.error('Error getting available categories:', error);
       throw new Error(`Failed to get available categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
