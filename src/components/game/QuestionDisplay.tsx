@@ -181,13 +181,14 @@ export function QuestionDisplay() {
 
               {/* Answer Options */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {currentQuestion.answers.map((answer) => {
-                  const isSelected = selectedAnswer === answer.text;
+                {currentQuestion.answers.map((answer, index) => {
+                  const isSelected = selectedAnswer === answer;
+                  const answerLabel = String.fromCharCode(65 + index); // A, B, C, D
                   let buttonVariant: "default" | "outline" | "secondary" | "destructive" = "outline";
                   let Icon = null;
 
                   if (gameState.showResult) {
-                    if (answer.text === gameState.currentQuestion?.correct_answer) {
+                    if (answer === gameState.lastCorrectAnswer) {
                       buttonVariant = "default";
                       Icon = CheckCircle;
                     } else if (isSelected && !gameState.lastAnswerCorrect) {
@@ -200,18 +201,18 @@ export function QuestionDisplay() {
 
                   return (
                     <Button
-                      key={answer.label}
+                      key={`${currentQuestion.id}-${index}`}
                       variant={buttonVariant}
                       className="h-auto p-4 text-left justify-start"
-                      onClick={() => handleAnswerSelect(answer.text)}
+                      onClick={() => handleAnswerSelect(answer)}
                       disabled={gameState.answering || gameState.showResult}
                     >
                       <div className="flex items-center space-x-3 w-full">
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-background border-2 flex items-center justify-center font-bold">
-                          {answer.label}
+                          {answerLabel}
                         </div>
                         <div className="flex-1 text-left">
-                          {answer.text}
+                          {answer}
                         </div>
                         {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
                       </div>
@@ -226,17 +227,17 @@ export function QuestionDisplay() {
                   <CardContent className="py-4">
                     <div className="flex items-center space-x-3">
                       {gameState.lastAnswerCorrect ? (
-                        <CheckCircle className="w-6 h-6 text-green-600" />
+                        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                       ) : (
-                        <XCircle className="w-6 h-6 text-red-600" />
+                        <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
                       )}
                       <div>
-                        <p className="font-medium">
+                        <p className={`font-medium ${gameState.lastAnswerCorrect ? 'text-green-800 dark:text-green-100' : 'text-red-800 dark:text-red-100'}`}>
                           {gameState.lastAnswerCorrect ? 'Correct!' : 'Incorrect!'}
                         </p>
                         {!gameState.lastAnswerCorrect && (
-                          <p className="text-sm text-muted-foreground">
-                            The correct answer was: {currentQuestion.correct_answer || 'Unknown'}
+                          <p className="text-sm text-red-700 dark:text-red-200">
+                            The correct answer was: {gameState.lastCorrectAnswer || 'Unknown'}
                           </p>
                         )}
                       </div>

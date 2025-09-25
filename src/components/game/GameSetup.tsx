@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
+import { gameService } from '@/services/game';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,7 @@ import {
 export function GameSetup() {
   const navigate = useNavigate();
   const { state: authState } = useAuth();
-  const { state: gameState, loadAvailableCategories, createGameSession, startGame } = useGame();
+  const { state: gameState, loadAvailableCategories, createGameSession, startGame, createUserProfile, loadUserProfile, setCurrentSession, setCurrentQuestion } = useGame();
 
   // Form state
   const [totalRounds, setTotalRounds] = useState(3);
@@ -42,6 +43,13 @@ export function GameSetup() {
   useEffect(() => {
     loadAvailableCategories();
   }, [loadAvailableCategories]);
+
+  // Load user profile on mount
+  useEffect(() => {
+    if (authState.user?.id && !gameState.userProfile) {
+      loadUserProfile(authState.user.id);
+    }
+  }, [authState.user?.id, gameState.userProfile, loadUserProfile]);
 
   // Validation
   const isValid = selectedCategories.length > 0 && totalRounds > 0 && questionsPerRound > 0;
@@ -60,20 +68,48 @@ export function GameSetup() {
 
     setIsCreating(true);
     try {
-      // Create game session
-      await createGameSession(authState.user.id, {
+      console.log('🎮 Starting game for user:', authState.user.id);
+      console.log('🎮 Current user profile:', gameState.userProfile);
+
+      // Ensure user profile exists before creating game session
+      if (!gameState.userProfile) {
+        console.log('🎮 Creating user profile...');
+        await createUserProfile({
+          username: authState.user.email?.split('@')[0] || 'Player',
+          total_games_played: 0,
+          total_correct_answers: 0,
+          total_questions_answered: 0,
+          favorite_categories: []
+        });
+        console.log('🎮 User profile created');
+      }
+
+      // Create game session and start it directly
+      console.log('🎮 Creating game session...');
+      const sessionResponse = await gameService.createGameSession(authState.user.id, {
         total_rounds: totalRounds,
         questions_per_round: questionsPerRound,
         selected_categories: selectedCategories
       });
+      console.log('🎮 Game session created:', sessionResponse);
 
-      // If session created successfully, start the game
-      if (gameState.currentSession) {
-        await startGame();
-        navigate('/game/play');
-      }
+      // Start the game directly with the session ID
+      console.log('🎮 Starting game...');
+      const startResponse = await gameService.startGame(sessionResponse.id);
+      console.log('🎮 Game started:', startResponse);
+
+      // Update the React context with the game state
+      // This is needed so QuestionDisplay can access currentSession and currentQuestion
+      console.log('🎮 Updating context with session and question...');
+
+      // Directly set the session and question data we got from the service calls
+      setCurrentSession(startResponse.session);
+      setCurrentQuestion(startResponse.first_question);
+
+      // Navigate to the game play screen
+      navigate('/game/play');
     } catch (error) {
-      console.error('Failed to start game:', error);
+      console.error('🎮 Failed to start game:', error);
     } finally {
       setIsCreating(false);
     }

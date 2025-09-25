@@ -35,6 +35,7 @@ interface GameState {
   answering: boolean;
   showResult: boolean;
   lastAnswerCorrect: boolean | null;
+  lastCorrectAnswer: string | null;
 
   // Available data
   availableCategories: string[];
@@ -51,7 +52,7 @@ type GameAction =
   | { type: 'SET_CURRENT_QUESTION'; payload: QuestionPresentation | null }
   | { type: 'SET_GAME_STATUS'; payload: GameState['gameStatus'] }
   | { type: 'SET_ANSWERING'; payload: boolean }
-  | { type: 'SET_SHOW_RESULT'; payload: { show: boolean; correct?: boolean } }
+  | { type: 'SET_SHOW_RESULT'; payload: { show: boolean; correct?: boolean; correctAnswer?: string } }
   | { type: 'SET_GAME_SUMMARY'; payload: GameSummary | null }
   | { type: 'UPDATE_SESSION_SCORE'; payload: number }
   | { type: 'RESET_GAME_STATE' };
@@ -81,6 +82,8 @@ interface GameContextType {
   // Utility
   resetGameState: () => void;
   clearError: () => void;
+  setCurrentSession: (session: GameSession) => void;
+  setCurrentQuestion: (question: QuestionPresentation) => void;
 }
 
 // Initial state
@@ -96,6 +99,7 @@ const initialState: GameState = {
   answering: false,
   showResult: false,
   lastAnswerCorrect: null,
+  lastCorrectAnswer: null,
   availableCategories: [],
 };
 
@@ -124,7 +128,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         showResult: action.payload.show,
-        lastAnswerCorrect: action.payload.correct ?? null
+        lastAnswerCorrect: action.payload.correct ?? null,
+        lastCorrectAnswer: action.payload.correctAnswer ?? null
       };
     case 'SET_GAME_SUMMARY':
       return { ...state, currentGameSummary: action.payload };
@@ -196,7 +201,7 @@ export function GameProvider({ children }: GameProviderProps) {
   };
 
   // Load available categories
-  const loadAvailableCategories = async () => {
+  const loadAvailableCategories = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
@@ -211,10 +216,10 @@ export function GameProvider({ children }: GameProviderProps) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, []);
 
   // Create game session
-  const createGameSession = async (userId: string, config: CreateGameSessionRequest) => {
+  const createGameSession = useCallback(async (userId: string, config: CreateGameSessionRequest) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
@@ -230,10 +235,10 @@ export function GameProvider({ children }: GameProviderProps) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, []);
 
   // Start game
-  const startGame = async () => {
+  const startGame = useCallback(async () => {
     if (!state.currentSession) {
       dispatch({ type: 'SET_ERROR', payload: 'No active game session' });
       return;
@@ -255,7 +260,7 @@ export function GameProvider({ children }: GameProviderProps) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [state.currentSession]);
 
   // Submit answer
   const submitAnswer = async (userAnswer: string, timeToAnswer: number) => {
@@ -281,29 +286,42 @@ export function GameProvider({ children }: GameProviderProps) {
       // Show result
       dispatch({
         type: 'SET_SHOW_RESULT',
-        payload: { show: true, correct: result.is_correct }
+        payload: { show: true, correct: result.is_correct, correctAnswer: result.correct_answer }
       });
 
       // Handle game flow
+      console.log('🎮 Submit answer result:', {
+        game_complete: result.game_complete,
+        round_complete: result.round_complete,
+        next_question: result.next_question
+      });
+
       if (result.game_complete) {
+        console.log('🎮 Game completed!');
         dispatch({ type: 'SET_GAME_STATUS', payload: 'completed' });
         // Load game summary
         const summary = await gameService.getGameSummary(state.currentSession.id);
         dispatch({ type: 'SET_GAME_SUMMARY', payload: summary });
       } else if (result.round_complete) {
+        console.log('🎮 Round completed, next question:', !!result.next_question);
         // Handle round completion - could show round summary
         if (result.next_question) {
           setTimeout(() => {
+            console.log('🎮 Setting next question after round completion');
             dispatch({ type: 'SET_CURRENT_QUESTION', payload: result.next_question! });
             dispatch({ type: 'SET_SHOW_RESULT', payload: { show: false } });
           }, 2000); // Show result for 2 seconds
         }
       } else if (result.next_question) {
+        console.log('🎮 Moving to next question');
         // Move to next question
         setTimeout(() => {
+          console.log('🎮 Setting next question');
           dispatch({ type: 'SET_CURRENT_QUESTION', payload: result.next_question! });
           dispatch({ type: 'SET_SHOW_RESULT', payload: { show: false } });
         }, 2000); // Show result for 2 seconds
+      } else {
+        console.log('🎮 No next question available');
       }
     } catch (error) {
       dispatch({
@@ -410,6 +428,17 @@ export function GameProvider({ children }: GameProviderProps) {
     dispatch({ type: 'SET_ERROR', payload: null });
   };
 
+  // Set current session directly
+  const setCurrentSession = (session: GameSession) => {
+    dispatch({ type: 'SET_CURRENT_SESSION', payload: session });
+    dispatch({ type: 'SET_GAME_STATUS', payload: 'playing' });
+  };
+
+  // Set current question directly
+  const setCurrentQuestion = (question: QuestionPresentation) => {
+    dispatch({ type: 'SET_CURRENT_QUESTION', payload: question });
+  };
+
   const contextValue: GameContextType = {
     state,
     loadUserProfile,
@@ -424,6 +453,8 @@ export function GameProvider({ children }: GameProviderProps) {
     loadGameHistory,
     resetGameState,
     clearError,
+    setCurrentSession,
+    setCurrentQuestion,
   };
 
   return (

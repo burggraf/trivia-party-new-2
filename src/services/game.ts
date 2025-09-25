@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { databaseService } from './database';
 import type {
   GameService,
   UserProfile,
@@ -90,17 +89,18 @@ class GameServiceImpl implements GameService {
   // Question Management
   async getAvailableCategories(): Promise<string[]> {
     try {
+      // Simple direct query to get distinct categories
       const { data, error } = await supabase
         .from('questions')
         .select('category')
-        .order('category');
+        .limit(1000); // Limit to reduce data transfer
 
       if (error) {
         throw error;
       }
 
       // Extract unique categories
-      const categories = [...new Set(data.map(item => item.category))];
+      const categories = [...new Set(data.map(item => item.category))].sort();
       return categories;
     } catch (error) {
       console.error('Error getting available categories:', error);
@@ -238,40 +238,58 @@ class GameServiceImpl implements GameService {
   // Game Flow
   async startGame(sessionId: string): Promise<StartGameResponse> {
     try {
+      console.log('🎯 Starting game for session:', sessionId);
+
       // Get the session
       const session = await this.getGameSession(sessionId);
       if (!session) {
         throw new Error('Game session not found');
       }
 
+      console.log('🎯 Found session:', session.id, session.status);
+
       if (session.status !== 'setup') {
         throw new Error('Game session is not in setup state');
       }
 
-      // Create game setup using edge function
-      const gameSetup = await databaseService.createGameSetup({
-        user_id: session.user_id,
-        total_rounds: session.total_rounds,
-        questions_per_round: session.questions_per_round,
-        selected_categories: session.selected_categories,
-      });
+      // Use our simplified create_game function
+      console.log('🎯 Calling create_game function...');
+      const { data, error } = await supabase
+        .rpc('create_game', {
+          p_total_rounds: session.total_rounds,
+          p_questions_per_round: session.questions_per_round,
+          p_selected_categories: session.selected_categories,
+        });
 
-      // Update session to in_progress
-      const updatedSession = await this.updateGameSession(sessionId, {
+      if (error) {
+        throw error;
+      }
+
+      console.log('🎯 Game creation response:', data);
+
+      // The create_game function creates a NEW session, so we need to use that session ID
+      const newSessionId = data[0].game_session_id;
+
+      // Update the NEW session to in_progress
+      const updatedSession = await this.updateGameSession(newSessionId, {
         status: 'in_progress',
         start_time: new Date().toISOString(),
       });
 
-      // Get the first question from the setup
-      const firstRound = gameSetup.rounds[0];
-      const firstQuestion = firstRound.questions[0];
+      // Get the first question from the returned questions array
+      const questions = data[0].questions;
+      if (!questions || questions.length === 0) {
+        throw new Error('No questions returned from game creation');
+      }
+
+      const firstQuestion = questions[0];
 
       const questionPresentation: QuestionPresentation = {
-        id: firstQuestion.question_id,
+        id: firstQuestion.id,
         question: firstQuestion.question,
         category: firstQuestion.category,
-        answers: firstQuestion.presented_answers,
-        round_number: firstRound.round_number,
+        answers: firstQuestion.answers,
+        round_number: firstQuestion.round_number,
         question_number: firstQuestion.question_order,
         total_questions: session.total_rounds * session.questions_per_round,
       };
@@ -297,12 +315,11 @@ class GameServiceImpl implements GameService {
         throw new Error('Game is not in progress');
       }
 
-      // Get the current game questions
+      // Get the current game questions with simplified schema
       const { data: gameQuestions, error } = await supabase
         .from('game_questions')
         .select(`
           *,
-          game_rounds!inner(round_number),
           questions!inner(question, category, a, b, c, d)
         `)
         .eq('game_session_id', sessionId)
@@ -322,7 +339,7 @@ class GameServiceImpl implements GameService {
         question: gameQuestions.questions.question,
         category: gameQuestions.questions.category,
         answers: gameQuestions.presented_answers,
-        round_number: gameQuestions.game_rounds.round_number,
+        round_number: gameQuestions.round_number,
         question_number: session.current_question_index + 1,
         total_questions: session.total_rounds * session.questions_per_round,
       };
@@ -336,27 +353,90 @@ class GameServiceImpl implements GameService {
 
   async submitAnswer(request: SubmitAnswerRequest): Promise<SubmitAnswerResponse> {
     try {
-      // Use edge function to validate answer and update game state
-      const validation = await databaseService.validateAnswer({
-        game_question_id: request.game_question_id,
-        user_answer: request.user_answer,
-        time_to_answer_ms: request.time_to_answer_ms,
-      });
+      // First get the game question without joins
+      const { data: gameQuestion, error: questionError } = await supabase
+        .from('game_questions')
+        .select('*')
+        .eq('id', request.game_question_id)
+        .single();
 
-      // Build response
-      const response: SubmitAnswerResponse = {
-        is_correct: validation.is_correct,
-        correct_answer: validation.correct_answer,
-        updated_score: validation.session_stats.current_score,
-        round_complete: validation.session_stats.round_complete,
-        game_complete: validation.session_stats.game_complete,
+      if (questionError || !gameQuestion) {
+        throw new Error('Game question not found');
+      }
+
+      // Then get the game session separately
+      const { data: gameSession, error: sessionError } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('id', gameQuestion.game_session_id)
+        .single();
+
+      if (sessionError || !gameSession) {
+        throw new Error('Game session not found');
+      }
+
+      // Check if answer is correct (client-side validation)
+      const isCorrect = request.user_answer === gameQuestion.correct_answer;
+      const pointsAwarded = isCorrect ? 1 : 0;
+
+      // Update the game question with the user's answer
+      const { error: updateError } = await supabase
+        .from('game_questions')
+        .update({
+          user_answer: request.user_answer,
+          is_correct: isCorrect,
+          time_to_answer_ms: request.time_to_answer_ms,
+          answered_at: new Date().toISOString(),
+          points_awarded: pointsAwarded,
+        })
+        .eq('id', request.game_question_id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Update game session score
+      const newScore = gameSession.total_score + pointsAwarded;
+      const newQuestionIndex = gameSession.current_question_index + 1;
+
+      // Check if game is complete
+      const totalQuestions = gameSession.total_rounds * gameSession.questions_per_round;
+      const gameComplete = newQuestionIndex >= totalQuestions;
+      const roundComplete = newQuestionIndex % gameSession.questions_per_round === 0;
+
+      const sessionUpdates: any = {
+        total_score: newScore,
+        current_question_index: newQuestionIndex,
       };
 
-      // If not game complete and not round complete, get next question
-      if (!validation.session_stats.game_complete && !validation.session_stats.round_complete) {
-        const nextQuestion = await this.getNextQuestion(request.game_session_id);
-        response.next_question = nextQuestion || undefined;
+      if (gameComplete) {
+        sessionUpdates.status = 'completed';
+        sessionUpdates.end_time = new Date().toISOString();
       }
+
+      const { error: sessionUpdateError } = await supabase
+        .from('game_sessions')
+        .update(sessionUpdates)
+        .eq('id', gameSession.id);
+
+      if (sessionUpdateError) {
+        throw sessionUpdateError;
+      }
+
+      // Get next question if game is not complete
+      let nextQuestion: QuestionPresentation | undefined;
+      if (!gameComplete) {
+        nextQuestion = await this.getNextQuestion(gameSession.id) || undefined;
+      }
+
+      const response: SubmitAnswerResponse = {
+        is_correct: isCorrect,
+        correct_answer: gameQuestion.correct_answer,
+        updated_score: newScore,
+        round_complete: roundComplete,
+        game_complete: gameComplete,
+        next_question: nextQuestion,
+      };
 
       return response;
     } catch (error) {
@@ -398,12 +478,8 @@ class GameServiceImpl implements GameService {
 
   async completeGame(sessionId: string): Promise<GameSummary> {
     try {
-      // Use edge function to complete the game
-      const completion = await databaseService.completeGame({
-        game_session_id: sessionId,
-      });
-
-      return completion.summary;
+      // Simply get the game summary - the game is already marked as complete in submitAnswer
+      return await this.getGameSummary(sessionId);
     } catch (error) {
       console.error('Error completing game:', error);
       throw new Error(`Failed to complete game: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -418,30 +494,57 @@ class GameServiceImpl implements GameService {
         throw new Error('Game session not found');
       }
 
-      // Get rounds summary
-      const { data: rounds, error: roundsError } = await supabase
-        .from('game_rounds')
+      // Get round summaries from simplified schema
+      const { data: questions, error: questionsError } = await supabase
+        .from('game_questions')
         .select('*')
         .eq('game_session_id', sessionId)
-        .order('round_number');
+        .order('round_number, question_order');
 
-      if (roundsError) {
-        throw roundsError;
+      if (questionsError) {
+        throw questionsError;
       }
 
-      const roundSummaries: RoundSummary[] = (rounds || []).map(round => ({
+      // Group questions by round and calculate summaries
+      const roundData = new Map<number, any>();
+
+      questions?.forEach(question => {
+        if (!roundData.has(question.round_number)) {
+          roundData.set(question.round_number, {
+            round_number: question.round_number,
+            correct_answers: 0,
+            total_questions: 0,
+            round_score: 0,
+            total_time: 0,
+          });
+        }
+
+        const round = roundData.get(question.round_number)!;
+        round.total_questions++;
+
+        if (question.is_correct) {
+          round.correct_answers++;
+          round.round_score += question.points_awarded || 0;
+        }
+
+        if (question.time_to_answer_ms) {
+          round.total_time += question.time_to_answer_ms;
+        }
+      });
+
+      const roundSummaries: RoundSummary[] = Array.from(roundData.values()).map(round => ({
         round_number: round.round_number,
         correct_answers: round.correct_answers,
-        total_questions: round.questions_count,
+        total_questions: round.total_questions,
         round_score: round.round_score,
-        duration_ms: round.duration_ms || 0,
-        accuracy_percentage: round.questions_count > 0 ?
-          (round.correct_answers / round.questions_count) * 100 : 0,
+        duration_ms: round.total_time,
+        accuracy_percentage: round.total_questions > 0 ?
+          (round.correct_answers / round.total_questions) * 100 : 0,
       }));
 
       const totalQuestions = session.total_rounds * session.questions_per_round;
-      const accuracy = totalQuestions > 0 ?
-        (session.total_score / totalQuestions) * 100 : 0;
+      const correctAnswers = questions?.filter(q => q.is_correct).length || 0;
+      const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
 
       // Check if this is a personal best (simplified logic)
       const { data: userSessions } = await supabase
@@ -458,7 +561,7 @@ class GameServiceImpl implements GameService {
         game_session_id: sessionId,
         total_score: session.total_score,
         total_questions: totalQuestions,
-        correct_answers: session.total_score, // Assuming 1 point per correct answer
+        correct_answers: correctAnswers,
         accuracy_percentage: accuracy,
         total_duration_ms: session.total_duration_ms || 0,
         rounds: roundSummaries,
@@ -480,21 +583,60 @@ class GameServiceImpl implements GameService {
     recent_games: GameSession[];
   }> {
     try {
-      // Use edge function to get comprehensive user stats
-      const statsResponse = await databaseService.getUserStats({
-        user_id: userId,
+      // Get user's completed games
+      const { data: games, error: gamesError } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false });
+
+      if (gamesError) {
+        throw gamesError;
+      }
+
+      // Get all game questions for this user to calculate stats
+      const { data: questions, error: questionsError } = await supabase
+        .from('game_questions')
+        .select('*, questions!inner(category)')
+        .in('game_session_id', games?.map(g => g.id) || []);
+
+      if (questionsError) {
+        throw questionsError;
+      }
+
+      // Calculate stats
+      const totalGames = games?.length || 0;
+      const totalScore = games?.reduce((sum, game) => sum + game.total_score, 0) || 0;
+      const totalQuestions = questions?.length || 0;
+      const correctAnswers = questions?.filter(q => q.is_correct).length || 0;
+      const averageAccuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+
+      // Find favorite category
+      const categoryCount = new Map<string, number>();
+      questions?.forEach(q => {
+        const category = q.questions.category;
+        categoryCount.set(category, (categoryCount.get(category) || 0) + 1);
       });
 
-      // Map to expected format
-      const favoriteCategory = statsResponse.statistics.favorite_categories.length > 0 ?
-        statsResponse.statistics.favorite_categories[0].category : '';
+      let favoriteCategory = '';
+      let maxCount = 0;
+      categoryCount.forEach((count, category) => {
+        if (count > maxCount) {
+          maxCount = count;
+          favoriteCategory = category;
+        }
+      });
+
+      // Get recent games (limit to 10)
+      const recentGames = games?.slice(0, 10) || [];
 
       return {
-        total_games: statsResponse.statistics.total_games_played,
-        total_score: statsResponse.statistics.total_correct_answers,
-        average_accuracy: statsResponse.statistics.average_accuracy,
+        total_games: totalGames,
+        total_score: totalScore,
+        average_accuracy: averageAccuracy,
         favorite_category: favoriteCategory,
-        recent_games: statsResponse.recent_games,
+        recent_games: recentGames,
       };
     } catch (error) {
       console.error('Error getting user stats:', error);

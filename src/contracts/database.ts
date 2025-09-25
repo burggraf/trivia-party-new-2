@@ -35,13 +35,22 @@ export interface ValidateAnswerRequest {
 export interface ValidateAnswerResponse {
   is_correct: boolean;
   correct_answer: string;
-  game_question_updated: boolean;
+  game_question_updated?: boolean;
   session_stats: {
     current_score: number;
-    current_round: number;
-    current_question_index: number;
+    current_round?: number;
+    current_question_index?: number;
     round_complete: boolean;
     game_complete: boolean;
+  };
+  next_question?: {
+    id: string;
+    question: string;
+    category: string;
+    answers: string[];
+    round_number: number;
+    question_number: number;
+    total_questions: number;
   };
 }
 
