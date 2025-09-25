@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useReducer, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { gameService } from '@/services/game';
 import type {
@@ -160,7 +160,7 @@ export function GameProvider({ children }: GameProviderProps) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
 
   // Load user profile
-  const loadUserProfile = async (userId: string) => {
+  const loadUserProfile = useCallback(async (userId: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
@@ -175,7 +175,7 @@ export function GameProvider({ children }: GameProviderProps) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, []);
 
   // Create user profile
   const createUserProfile = async (profileData: Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>) => {
@@ -384,7 +384,7 @@ export function GameProvider({ children }: GameProviderProps) {
   };
 
   // Load game history
-  const loadGameHistory = async (userId: string) => {
+  const loadGameHistory = useCallback(async (userId: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
 
     try {
@@ -398,7 +398,7 @@ export function GameProvider({ children }: GameProviderProps) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, []);
 
   // Reset game state
   const resetGameState = () => {

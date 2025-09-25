@@ -43,40 +43,40 @@
 
 ## Phase 3.2: Database Schema (MUST COMPLETE BEFORE 3.3)
 
-- [ ] **T008** Create Supabase migration for `user_profiles` table with RLS policies in `supabase/migrations/001_user_profiles.sql`
-- [ ] **T009** Create Supabase migration for `game_sessions` table with foreign keys in `supabase/migrations/002_game_sessions.sql`
-- [ ] **T010** Create Supabase migration for `game_rounds` table with constraints in `supabase/migrations/003_game_rounds.sql`
-- [ ] **T011** Create Supabase migration for `game_questions` table with relationships in `supabase/migrations/004_game_questions.sql`
-- [ ] **T012** Create database indexes and performance optimization in `supabase/migrations/005_indexes.sql`
-- [ ] **T013** Setup Row Level Security policies for all tables in `supabase/migrations/006_rls_policies.sql`
+- [x] **T008** Create Supabase migration for `user_profiles` table with RLS policies in `supabase/migrations/001_user_profiles.sql`
+- [x] **T009** Create Supabase migration for `game_sessions` table with foreign keys in `supabase/migrations/002_game_sessions.sql`
+- [x] **T010** Create Supabase migration for `game_rounds` table with constraints in `supabase/migrations/003_game_rounds.sql`
+- [x] **T011** Create Supabase migration for `game_questions` table with relationships in `supabase/migrations/004_game_questions.sql`
+- [x] **T012** Create database indexes and performance optimization in `supabase/migrations/005_indexes.sql`
+- [x] **T013** Setup Row Level Security policies for all tables in `supabase/migrations/006_rls_policies.sql`
 
 ## Phase 3.3: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.4
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
-- [ ] **T014** [P] Contract test for auth service in `src/services/__tests__/auth.test.ts`
-- [ ] **T015** [P] Contract test for game service in `src/services/__tests__/game.test.ts`
-- [ ] **T016** [P] Contract test for database edge functions in `src/services/__tests__/database.test.ts`
-- [ ] **T017** [P] Component test for auth components in `src/components/auth/__tests__/auth-components.test.tsx`
-- [ ] **T018** [P] Component test for game components in `src/components/game/__tests__/game-components.test.tsx`
-- [ ] **T019** [P] Integration test for user registration flow in `src/__tests__/integration/auth-flow.test.ts`
-- [ ] **T020** [P] Integration test for game session flow in `src/__tests__/integration/game-flow.test.ts`
-- [ ] **T021** [P] E2E test for complete user journey in `tests/e2e/user-journey.spec.ts`
+- [x] **T014** [P] Contract test for auth service in `src/services/__tests__/auth.test.ts`
+- [x] **T015** [P] Contract test for game service in `src/services/__tests__/game.test.ts`
+- [x] **T016** [P] Contract test for database edge functions in `src/services/__tests__/database.test.ts`
+- [x] **T017** [P] Component test for auth components in `src/components/auth/__tests__/auth-components.test.tsx`
+- [x] **T018** [P] Component test for game components in `src/components/game/__tests__/game-components.test.tsx`
+- [x] **T019** [P] Integration test for user registration flow in `src/__tests__/integration/auth-flow.test.ts`
+- [x] **T020** [P] Integration test for game session flow in `src/__tests__/integration/game-flow.test.ts`
+- [x] **T021** [P] E2E test for complete user journey in `tests/e2e/user-journey.spec.ts`
 
 ## Phase 3.4: Supabase Edge Functions
 
-- [ ] **T022** [P] Create edge function for game setup logic in `supabase/functions/create-game-setup/index.ts`
-- [ ] **T023** [P] Create edge function for answer validation in `supabase/functions/validate-answer/index.ts`
-- [ ] **T024** [P] Create edge function for game completion in `supabase/functions/complete-game/index.ts`
-- [ ] **T025** [P] Create edge function for user statistics in `supabase/functions/user-stats/index.ts`
+- [x] **T022** [P] Create edge function for game setup logic in `supabase/functions/create-game-setup/index.ts`
+- [x] **T023** [P] Create edge function for answer validation in `supabase/functions/validate-answer/index.ts`
+- [x] **T024** [P] Create edge function for game completion in `supabase/functions/complete-game/index.ts`
+- [x] **T025** [P] Create edge function for user statistics in `supabase/functions/user-stats/index.ts`
 
 ## Phase 3.5: Core Implementation (ONLY after tests are failing)
 
-- [ ] **T026** [P] Implement Supabase client configuration in `src/lib/supabase.ts`
-- [ ] **T027** [P] Implement auth service with login/logout/register in `src/services/auth.ts`
-- [ ] **T028** [P] Implement game service with session management in `src/services/game.ts`
-- [ ] **T029** [P] Implement database service for edge function calls in `src/services/database.ts`
-- [ ] **T030** Create React context for auth state management in `src/contexts/AuthContext.tsx`
-- [ ] **T031** Create React context for game state management in `src/contexts/GameContext.tsx`
+- [x] **T026** [P] Implement Supabase client configuration in `src/lib/supabase.ts`
+- [x] **T027** [P] Implement auth service with login/logout/register in `src/services/auth.ts`
+- [x] **T028** [P] Implement game service with session management in `src/services/game.ts`
+- [x] **T029** [P] Implement database service for edge function calls in `src/services/database.ts`
+- [x] **T030** Create React context for auth state management in `src/contexts/AuthContext.tsx`
+- [x] **T031** Create React context for game state management in `src/contexts/GameContext.tsx`
 - [ ] **T032** [P] Implement auth components (Login, Register, Profile) in `src/components/auth/`
 - [ ] **T033** Implement game setup component in `src/components/game/GameSetup.tsx`
 - [ ] **T034** Implement question display component in `src/components/game/QuestionDisplay.tsx`
