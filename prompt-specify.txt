@@ -1,0 +1,21 @@
+/specify
+
+This project is a single-user trivia game using a Supabase proeject (currently accessible via the Supabase MCP server). There is an existing "questions" table in the supabase database containing trivia questions, possible answers, correct answers, and relevant metadata.  The correct answer is always in field a, with plausible but incorrect answers in fields b, c, and d.
+
+The simplified game flow should:
+
+- Allow the user to start a new game session.
+- Allow the user to select the number of rounds and the the number of questions for each round.
+- Allow the user to choose which categories of questions they want to answer (for each round, so one round could be "Science" and the next "History", or any round can have any combination of categories or use all categories).
+- Randomly select questions from the "questions" table based on the user's preferences to create a question set for the game session.
+- Select and display questions one at a time from the set of game questions.  Answers need to be randomized in their display order, since the correct answer is always in "a".
+- Allow the user to submit an answer for each question.
+- Check the submitted answer against the correct answer stored in the database.
+- Track the user's score based on correct answers.
+- Provide immediate feedback after each question (correct/incorrect).
+- Continue through each round, providing a score summary at the end of the round.
+- Include a basic UI flow: start game, show question, show score, and end game.
+
+Please inspect the structure of the "questions" table to infer relevant fields and use the database for question selection and validation.
+
+Exclude multi-user or realtime functionalities for now; focus only on the single-user experience.

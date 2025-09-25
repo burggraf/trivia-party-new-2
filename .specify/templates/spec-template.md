@@ -44,11 +44,11 @@ When creating this spec from a user prompt:
 3. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
 4. **Common underspecified areas**:
    - User types and permissions
-   - Data retention/deletion policies  
-   - Performance targets and scale
-   - Error handling behaviors
-   - Integration requirements
-   - Security/compliance needs
+   - Client-side data storage approach (localStorage vs IndexedDB)
+   - Performance targets and Core Web Vitals requirements
+   - Error handling and offline behavior
+   - Third-party API integration requirements
+   - Accessibility and mobile responsiveness needs
 
 ---
 

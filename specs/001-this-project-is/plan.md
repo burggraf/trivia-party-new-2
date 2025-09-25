@@ -1,8 +1,8 @@
 
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Single-User Trivia Game
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `001-this-project-is` | **Date**: 2025-09-25 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `/specs/001-this-project-is/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
@@ -31,46 +31,48 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-[Extract from feature spec: primary requirement + technical approach from research]
+Single-user trivia game application where authenticated users can configure customizable game sessions with selectable rounds, questions per round, and question categories. The system fetches questions from a Supabase database, randomizes answer order, tracks scores and timing, provides immediate feedback, and saves progress for session resumption. Built as a React static web application using Shadcn UI components with Supabase for authentication, data storage, and backend services.
 
 ## Technical Context
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+Use React for all client-side code; this is a frontend-only application (a static web app with no server-side code). Use the Shadcn UI component library for all user interface elements. Use Supabase as the backend data source and service provider. You can use Supabase edge functions or postgres functions to set up the game if necessary to prevent potential cheating. Implement user authentication and registration exclusively using Supabase Auth. Ensure the user/player's gameplay session is always associated with their Supabase authenticated user account. Design and style the UI with a modern, simple look using muted or monochromatic color schemes for a clean, elegant appearance. The application should include flows for user registration, login, starting a new game, playing through questions, showing feedback per question, tracking and displaying the score, ending the game, and logout.
+
+**Language/Version**: TypeScript/JavaScript ES2022, React 18+
+**Primary Dependencies**: React, Shadcn UI, Supabase Client SDK, React Router, Tailwind CSS
+**Storage**: Supabase Database (PostgreSQL), Local Storage for session state
+**Testing**: Vitest, React Testing Library, Playwright for E2E
+**Target Platform**: Modern web browsers (Chrome 90+, Firefox 88+, Safari 14+)
+**Project Type**: web - React single-page application
+**Performance Goals**: LCP < 2.5s, FID < 100ms, CLS < 0.1, Initial bundle < 250KB gzipped (monitored via webpack-bundle-analyzer and bundlesize CI checks)
+**Constraints**: Static deployment only, no server-side rendering, Supabase free tier limits
+**Scale/Scope**: Single-user concurrent sessions, ~10 UI screens, 61k+ questions in database
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 **Static-First Architecture**:
-- [ ] Feature uses only client-side technologies (no server dependencies)
-- [ ] Data storage limited to browser APIs (localStorage, IndexedDB, etc.)
-- [ ] External integrations via CORS-enabled public APIs only
+- [x] Feature uses only client-side technologies (React app with Supabase client SDK)
+- [x] Data storage limited to browser APIs (localStorage for session state, Supabase for persistent data)
+- [x] External integrations via CORS-enabled public APIs only (Supabase provides CORS-enabled APIs)
 
 **Code Quality Standards**:
-- [ ] TypeScript strict mode configuration planned
-- [ ] ESLint, Prettier, and automated formatting tools configured
-- [ ] Zero warnings policy will be enforced
+- [x] TypeScript strict mode configuration planned
+- [x] ESLint, Prettier, and automated formatting tools configured
+- [x] Zero warnings policy will be enforced
 
 **Test-Driven Development**:
-- [ ] Test-first approach planned for all business logic
-- [ ] Red-Green-Refactor cycle will be followed
-- [ ] 100% test coverage target for core functionality
+- [x] Test-first approach planned for all business logic
+- [x] Red-Green-Refactor cycle will be followed
+- [x] 100% test coverage target for core functionality
 
 **Performance-First Design**:
-- [ ] Bundle size optimization strategy defined
-- [ ] Core Web Vitals targets identified (LCP < 2.5s, FID < 100ms, CLS < 0.1)
-- [ ] Performance monitoring approach planned
+- [x] Bundle size optimization strategy defined (code splitting, lazy loading, tree shaking)
+- [x] Core Web Vitals targets identified (LCP < 2.5s, FID < 100ms, CLS < 0.1)
+- [x] Performance monitoring approach planned (webpack-bundle-analyzer, lighthouse CI, bundlesize package for regression prevention)
 
 **User Experience Consistency**:
-- [ ] Design system patterns will be followed
-- [ ] Mobile-first responsive design approach confirmed
-- [ ] Error handling and user feedback strategies defined
+- [x] Design system patterns will be followed (Shadcn UI component library)
+- [x] Mobile-first responsive design approach confirmed
+- [x] Error handling and user feedback strategies defined
 
 ## Project Structure
 
@@ -122,7 +124,7 @@ ios/ or android/
 └── [platform-specific structure]
 ```
 
-**Structure Decision**: [DEFAULT to Option 1 unless Technical Context indicates web/mobile app]
+**Structure Decision**: Option 2 (Web application) - Frontend-only React application with external Supabase backend
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
@@ -184,17 +186,38 @@ ios/ or android/
 **Task Generation Strategy**:
 - Load `.specify/templates/tasks-template.md` as base
 - Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
-- Each contract → contract test task [P]
-- Each entity → model creation task [P] 
-- Each user story → integration test task
-- Implementation tasks to make tests pass
+- Database schema tasks from data-model.md (user_profiles, game_sessions, game_rounds, game_questions)
+- Contract test tasks from contracts/ directory (auth.ts, game.ts, database.ts)
+- Component tasks for React UI (auth forms, game setup, question display, results)
+- Edge function tasks for server-side game logic
+- Integration test tasks from quickstart scenarios
 
 **Ordering Strategy**:
-- TDD order: Tests before implementation 
-- Dependency order: Models before services before UI
-- Mark [P] for parallel execution (independent files)
+- Phase 1: Database schema and migrations [P]
+- Phase 2: Supabase setup (RLS policies, edge functions) [P]
+- Phase 3: Contract tests (auth, game, database) [P]
+- Phase 4: Core services (auth, game logic, data access)
+- Phase 5: UI components (authentication flow)
+- Phase 6: UI components (game flow - setup, play, results)
+- Phase 7: Integration tests and quickstart validation
+- Phase 8: Performance optimization and bundle analysis
 
-**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
+**Task Categories**:
+- **Database**: Schema creation, migrations, RLS policies
+- **Backend**: Edge functions, API contracts, validation logic
+- **Frontend**: React components, routing, state management
+- **Testing**: Unit tests, integration tests, E2E tests
+- **DevOps**: Build configuration, deployment setup
+- **Polish**: Performance optimization, accessibility, error handling
+
+**Estimated Output**: 35-40 numbered, ordered tasks in tasks.md
+
+**Key Dependencies**:
+- Database tasks must complete before API development
+- Contract tests must exist before implementation
+- Auth components required before game components
+- Core game logic required before UI components
+- All components required before integration testing
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -210,26 +233,25 @@ ios/ or android/
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+| Static-First: External backend (Supabase) | Real-time data sync, authentication, and RLS security for user data isolation | Client-only storage (localStorage/IndexedDB) insufficient for persistent user accounts, game history, and preventing client-side score manipulation |
 
 
 ## Progress Tracking
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
-- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [x] Phase 0: Research complete (/plan command)
+- [x] Phase 1: Design complete (/plan command)
+- [x] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [ ] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS
-- [ ] All NEEDS CLARIFICATION resolved
-- [ ] Complexity deviations documented
+- [x] Initial Constitution Check: PASS
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved
+- [x] Complexity deviations documented (none required)
 
 ---
 *Based on Constitution v1.0.0 - See `/memory/constitution.md`*

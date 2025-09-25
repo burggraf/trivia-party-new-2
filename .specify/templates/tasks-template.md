@@ -43,38 +43,38 @@
 - Paths shown below assume single project - adjust based on plan.md structure
 
 ## Phase 3.1: Setup
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
+- [ ] T001 Create static website project structure per implementation plan
+- [ ] T002 Initialize project with static site generator and client-side dependencies
+- [ ] T003 [P] Configure TypeScript, ESLint, Prettier with strict settings
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
-- [ ] T004 [P] Contract test POST /api/users in tests/contract/test_users_post.py
-- [ ] T005 [P] Contract test GET /api/users/{id} in tests/contract/test_users_get.py
-- [ ] T006 [P] Integration test user registration in tests/integration/test_registration.py
-- [ ] T007 [P] Integration test auth flow in tests/integration/test_auth.py
+- [ ] T004 [P] Unit test for data models in tests/unit/test_models.js
+- [ ] T005 [P] Component test for UI components in tests/components/test_components.js
+- [ ] T006 [P] Integration test for user workflows in tests/integration/test_workflows.js
+- [ ] T007 [P] Performance test for Core Web Vitals in tests/performance/test_vitals.js
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
-- [ ] T008 [P] User model in src/models/user.py
-- [ ] T009 [P] UserService CRUD in src/services/user_service.py
-- [ ] T010 [P] CLI --create-user in src/cli/user_commands.py
-- [ ] T011 POST /api/users endpoint
-- [ ] T012 GET /api/users/{id} endpoint
-- [ ] T013 Input validation
-- [ ] T014 Error handling and logging
+- [ ] T008 [P] Data models with client-side validation in src/models/
+- [ ] T009 [P] Service layer for client-side logic in src/services/
+- [ ] T010 [P] UI components with TypeScript in src/components/
+- [ ] T011 Client-side routing and navigation
+- [ ] T012 Local storage management utilities
+- [ ] T013 Input validation and sanitization
+- [ ] T014 Error handling and user feedback systems
 
 ## Phase 3.4: Integration
-- [ ] T015 Connect UserService to DB
-- [ ] T016 Auth middleware
-- [ ] T017 Request/response logging
-- [ ] T018 CORS and security headers
+- [ ] T015 Connect services to local storage APIs
+- [ ] T016 Third-party API integration (if applicable)
+- [ ] T017 Client-side error logging and analytics
+- [ ] T018 Security headers and CSP configuration
 
 ## Phase 3.5: Polish
-- [ ] T019 [P] Unit tests for validation in tests/unit/test_validation.py
-- [ ] T020 Performance tests (<200ms)
-- [ ] T021 [P] Update docs/api.md
-- [ ] T022 Remove duplication
-- [ ] T023 Run manual-testing.md
+- [ ] T019 [P] Unit tests for validation in tests/unit/test_validation.js
+- [ ] T020 Performance optimization and Core Web Vitals validation
+- [ ] T021 [P] Update documentation and README
+- [ ] T022 Code cleanup and refactoring
+- [ ] T023 Accessibility testing and compliance verification
 
 ## Dependencies
 - Tests (T004-T007) before implementation (T008-T014)
@@ -85,10 +85,10 @@
 ## Parallel Example
 ```
 # Launch T004-T007 together:
-Task: "Contract test POST /api/users in tests/contract/test_users_post.py"
-Task: "Contract test GET /api/users/{id} in tests/contract/test_users_get.py"
-Task: "Integration test registration in tests/integration/test_registration.py"
-Task: "Integration test auth in tests/integration/test_auth.py"
+Task: "Unit test for data models in tests/unit/test_models.js"
+Task: "Component test for UI components in tests/components/test_components.js"
+Task: "Integration test for user workflows in tests/integration/test_workflows.js"
+Task: "Performance test for Core Web Vitals in tests/performance/test_vitals.js"
 ```
 
 ## Notes
