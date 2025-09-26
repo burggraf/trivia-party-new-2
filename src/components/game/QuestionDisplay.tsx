@@ -38,12 +38,12 @@ export function QuestionDisplay() {
     }
   }, [currentQuestion, gameState.showResult]);
 
-  // Navigate to results if game is completed
+  // Navigate to results if game is completed, but only after showing the result
   useEffect(() => {
-    if (gameState.gameStatus === 'completed') {
+    if (gameState.gameStatus === 'completed' && !gameState.showResult) {
       navigate('/game/results');
     }
-  }, [gameState.gameStatus, navigate]);
+  }, [gameState.gameStatus, gameState.showResult, navigate]);
 
   const handleAnswerSelect = (answerText: string) => {
     if (gameState.answering || gameState.showResult || isPaused) return;
@@ -104,7 +104,7 @@ export function QuestionDisplay() {
                   Round {currentSession.current_round} of {currentSession.total_rounds}
                 </CardTitle>
                 <CardDescription>
-                  Question {currentSession.current_question_index + 1} of {currentSession.questions_per_round}
+                  Question {(currentSession.current_question_index % currentSession.questions_per_round) + 1} of {currentSession.questions_per_round}
                 </CardDescription>
               </div>
               <div className="flex items-center space-x-4">

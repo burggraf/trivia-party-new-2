@@ -409,6 +409,10 @@ class GameServiceImpl implements GameService {
       const newScore = gameSession.total_score + pointsAwarded;
       const newQuestionIndex = gameSession.current_question_index + 1;
 
+      // Calculate current round based on question index, ensuring it doesn't exceed total_rounds
+      const calculatedRound = Math.floor(newQuestionIndex / gameSession.questions_per_round) + 1;
+      const newCurrentRound = Math.min(calculatedRound, gameSession.total_rounds);
+
       // Check if game is complete
       const totalQuestions = gameSession.total_rounds * gameSession.questions_per_round;
       const gameComplete = newQuestionIndex >= totalQuestions;
@@ -417,6 +421,7 @@ class GameServiceImpl implements GameService {
       const sessionUpdates: any = {
         total_score: newScore,
         current_question_index: newQuestionIndex,
+        current_round: newCurrentRound,
       };
 
       if (gameComplete) {
