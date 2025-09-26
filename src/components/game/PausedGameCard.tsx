@@ -60,8 +60,17 @@ export function PausedGameCard({ game }: PausedGameCardProps) {
 
   // Calculate game progress
   const totalQuestions = game.total_rounds * game.questions_per_round;
-  const answeredQuestions = (game.current_round - 1) * game.questions_per_round + (game.current_question_index || 0);
-  const progressPercentage = Math.round((answeredQuestions / totalQuestions) * 100);
+
+  // Fix: Calculate the actual answered questions correctly
+  // current_question_index appears to be a cumulative count across all rounds, not per-round index
+  const rawAnsweredQuestions = Math.max(0, game.current_question_index || 0);
+
+  // Safety: Ensure we never exceed total questions
+  const answeredQuestions = Math.min(rawAnsweredQuestions, totalQuestions);
+
+  // Safety: Cap percentage between 0 and 100
+  const rawPercentage = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+  const progressPercentage = Math.min(100, Math.max(0, Math.round(rawPercentage)));
 
   // Calculate time since paused
   const timeSincePaused = game.updated_at ? new Date().getTime() - new Date(game.updated_at).getTime() : 0;
@@ -69,17 +78,18 @@ export function PausedGameCard({ game }: PausedGameCardProps) {
   const minutesSincePaused = Math.floor((timeSincePaused % (1000 * 60 * 60)) / (1000 * 60));
 
   const getTimeDisplay = () => {
+    const prefix = game.status === 'paused' ? 'Paused' : 'Last activity';
     if (hoursSincePaused > 0) {
-      return `Paused ${hoursSincePaused}h ${minutesSincePaused}m ago`;
+      return `${prefix} ${hoursSincePaused}h ${minutesSincePaused}m ago`;
     } else if (minutesSincePaused > 0) {
-      return `Paused ${minutesSincePaused}m ago`;
+      return `${prefix} ${minutesSincePaused}m ago`;
     } else {
-      return 'Just paused';
+      return game.status === 'paused' ? 'Just paused' : 'Just updated';
     }
   };
 
   return (
-    <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50/50 to-background dark:from-amber-950/20 dark:to-background">
+    <Card className={`border-l-4 ${game.status === 'paused' ? 'border-l-amber-500 bg-gradient-to-r from-amber-50/50 to-background dark:from-amber-950/20 dark:to-background' : 'border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-background dark:from-blue-950/20 dark:to-background'}`}>
       <CardContent className="p-6">
         {gameState.error && (
           <Alert variant="destructive" className="mb-4">
@@ -102,8 +112,8 @@ export function PausedGameCard({ game }: PausedGameCardProps) {
             {/* Game Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-2">
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                  Paused
+                <Badge variant="secondary" className={game.status === 'paused' ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}>
+                  {game.status === 'paused' ? 'Paused' : 'In Progress'}
                 </Badge>
                 <span className="text-sm text-muted-foreground">{getTimeDisplay()}</span>
               </div>

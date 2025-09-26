@@ -8,7 +8,7 @@ import type {
   AuthUser,
   AuthSession,
   AuthError
-} from '../../specs/001-this-project-is/contracts/auth';
+} from '@/contracts/auth';
 
 class AuthServiceImpl implements AuthService {
   async signUp(request: SignUpRequest): Promise<SignUpResponse> {

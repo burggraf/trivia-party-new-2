@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
 import {
   NavigationMenu,
@@ -29,6 +30,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { state, signOut } = useAuth();
+  const { state: gameState, pauseGame } = useGame();
   const location = useLocation();
 
   const isAuthenticated = state.user && !state.loading;
@@ -36,6 +38,20 @@ export function Layout({ children }: LayoutProps) {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleNavigation = async (path: string) => {
+    // If user is in an active game and navigating away from the game play page, pause the game
+    if (gameState.gameStatus === 'playing' &&
+        gameState.currentSession &&
+        location.pathname === '/game/play' &&
+        path !== '/game/play') {
+      try {
+        await pauseGame();
+      } catch (error) {
+        console.error('Failed to pause game during navigation:', error);
+      }
+    }
   };
 
   // Don't show navigation on auth pages
@@ -66,7 +82,7 @@ export function Layout({ children }: LayoutProps) {
                         variant={location.pathname === '/' ? 'default' : 'ghost'}
                         className="px-4"
                       >
-                        <Link to="/">
+                        <Link to="/" onClick={() => handleNavigation('/')}>
                           <Home className="w-4 h-4 mr-2" />
                           Home
                         </Link>
@@ -79,7 +95,7 @@ export function Layout({ children }: LayoutProps) {
                         variant={location.pathname.startsWith('/game') ? 'default' : 'ghost'}
                         className="px-4"
                       >
-                        <Link to="/game/setup">
+                        <Link to="/game/setup" onClick={() => handleNavigation('/game/setup')}>
                           <Gamepad2 className="w-4 h-4 mr-2" />
                           New Game
                         </Link>
@@ -92,7 +108,7 @@ export function Layout({ children }: LayoutProps) {
                         variant={location.pathname === '/profile' ? 'default' : 'ghost'}
                         className="px-4"
                       >
-                        <Link to="/profile">
+                        <Link to="/profile" onClick={() => handleNavigation('/profile')}>
                           <Trophy className="w-4 h-4 mr-2" />
                           Stats
                         </Link>
@@ -126,13 +142,13 @@ export function Layout({ children }: LayoutProps) {
                       </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link to="/profile" className="cursor-pointer">
+                        <Link to="/profile" className="cursor-pointer" onClick={() => handleNavigation('/profile')}>
                           <User className="w-4 h-4 mr-2" />
                           Profile
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/game/setup" className="cursor-pointer">
+                        <Link to="/game/setup" className="cursor-pointer" onClick={() => handleNavigation('/game/setup')}>
                           <Gamepad2 className="w-4 h-4 mr-2" />
                           New Game
                         </Link>

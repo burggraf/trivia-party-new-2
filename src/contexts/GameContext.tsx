@@ -7,7 +7,7 @@ import type {
   QuestionPresentation,
   GameSummary,
   CreateGameSessionRequest
-} from '../../specs/001-this-project-is/contracts/game';
+} from '@/contracts/game';
 
 // Game State Types
 interface GameState {

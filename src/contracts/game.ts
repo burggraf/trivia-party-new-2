@@ -88,7 +88,7 @@ export interface QuestionPresentation {
   id: string;
   question: string;
   category: string;
-  answers: { label: string; text: string }[]; // A, B, C, D with randomized content
+  answers: string[]; // Array of answer choices (A, B, C, D)
   round_number: number;
   question_number: number;
   total_questions: number;

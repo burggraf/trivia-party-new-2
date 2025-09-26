@@ -45,6 +45,7 @@ export function QuestionDisplay() {
     }
   }, [gameState.gameStatus, gameState.showResult, navigate]);
 
+
   const handleAnswerSelect = (answerText: string) => {
     if (gameState.answering || gameState.showResult || isPaused) return;
     setSelectedAnswer(answerText);

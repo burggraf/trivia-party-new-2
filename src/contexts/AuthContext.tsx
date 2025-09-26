@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { authService } from '@/services/auth';
-import type { AuthUser, AuthSession } from '../../specs/001-this-project-is/contracts/auth';
+import type { AuthUser, AuthSession } from '@/contracts/auth';
 
 // Auth State Types
 interface AuthState {

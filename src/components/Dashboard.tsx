@@ -38,9 +38,15 @@ export function Dashboard() {
 
   const hasPlayedGames = (profile?.total_games_played || 0) > 0;
 
-  // Get paused games (up to 3 most recent)
-  const pausedGames = gameState.gameHistory
-    .filter(game => game.status === 'paused')
+  // Get games that can be resumed (paused or in_progress, up to 3 most recent)
+  // Only show games from the last 24 hours to avoid showing very old abandoned games
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const resumableGames = gameState.gameHistory
+    .filter(game => {
+      const isResumableStatus = game.status === 'paused' || game.status === 'in_progress';
+      const isRecent = new Date(game.updated_at) > oneDayAgo;
+      return isResumableStatus && isRecent;
+    })
     .slice(0, 3);
 
   return (
@@ -68,19 +74,19 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Paused Games Section */}
-      {pausedGames.length > 0 && (
+      {/* Resumable Games Section */}
+      {resumableGames.length > 0 && (
         <div className="space-y-4">
           <div className="text-center">
             <h2 className="text-2xl font-semibold text-amber-700 dark:text-amber-400">
               Continue Playing
             </h2>
             <p className="text-muted-foreground">
-              You have {pausedGames.length} paused game{pausedGames.length > 1 ? 's' : ''} waiting for you
+              You have {resumableGames.length} game{resumableGames.length > 1 ? 's' : ''} waiting for you
             </p>
           </div>
           <div className="space-y-3">
-            {pausedGames.map((game) => (
+            {resumableGames.map((game) => (
               <PausedGameCard key={game.id} game={game} />
             ))}
           </div>

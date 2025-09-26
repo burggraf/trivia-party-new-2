@@ -11,7 +11,7 @@ import type {
   SubmitAnswerResponse,
   RoundSummary,
   GameSummary,
-} from '../../specs/001-this-project-is/contracts/game';
+} from '@/contracts/game';
 
 class GameServiceImpl implements GameService {
   // Profile Management
