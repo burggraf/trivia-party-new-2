@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { GameProvider } from '@/contexts/GameContext';
+import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { Layout } from '@/components/layout/Layout';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -12,13 +13,19 @@ import { Toaster } from '@/components/ui/sonner';
 function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <ErrorBoundary>
-          <AuthProvider>
-            <ErrorBoundary>
-              <GameProvider>
-                <ErrorBoundary>
-                  <Layout>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <BrowserRouter>
+          <ErrorBoundary>
+            <AuthProvider>
+              <ErrorBoundary>
+                <GameProvider>
+                  <ErrorBoundary>
+                    <Layout>
                     <ErrorBoundary>
                       <Routes>
                         {/* Public Routes */}
@@ -84,13 +91,14 @@ function App() {
                   </Layout>
                 </ErrorBoundary>
 
-                {/* Toast Notifications */}
-                <Toaster />
-              </GameProvider>
-            </ErrorBoundary>
-          </AuthProvider>
-        </ErrorBoundary>
-      </BrowserRouter>
+                  {/* Toast Notifications */}
+                  <Toaster />
+                </GameProvider>
+              </ErrorBoundary>
+            </AuthProvider>
+          </ErrorBoundary>
+        </BrowserRouter>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

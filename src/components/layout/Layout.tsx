@@ -13,12 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Gamepad2,
   User,
   LogOut,
-  Settings,
   Trophy,
   Home
 } from 'lucide-react';
@@ -104,6 +104,9 @@ export function Layout({ children }: LayoutProps) {
 
               {/* User Menu */}
               <div className="flex items-center space-x-4">
+                {/* Theme Toggle */}
+                <ThemeToggle />
+
                 {isAuthenticated ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
