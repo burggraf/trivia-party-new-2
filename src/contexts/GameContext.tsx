@@ -282,8 +282,11 @@ export function GameProvider({ children }: GameProviderProps) {
         time_to_answer_ms: timeToAnswer
       });
 
-      // Update score
-      dispatch({ type: 'UPDATE_SESSION_SCORE', payload: result.updated_score });
+      // Fetch updated session to get current round and question index
+      const updatedSession = await gameService.getGameSession(state.currentSession.id);
+      if (updatedSession) {
+        dispatch({ type: 'SET_CURRENT_SESSION', payload: updatedSession });
+      }
 
       // Show result
       dispatch({
