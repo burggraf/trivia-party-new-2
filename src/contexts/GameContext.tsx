@@ -74,6 +74,8 @@ interface GameContextType {
   submitAnswer: (userAnswer: string, timeToAnswer: number) => Promise<void>;
   pauseGame: () => Promise<void>;
   resumeGame: () => Promise<void>;
+  resumePausedGame: (sessionId: string) => Promise<void>;
+  abandonGame: (sessionId: string) => Promise<void>;
   completeGame: () => Promise<void>;
 
   // Statistics
@@ -401,6 +403,63 @@ export function GameProvider({ children }: GameProviderProps) {
     }
   };
 
+  // Resume paused game by session ID
+  const resumePausedGame = async (sessionId: string) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      // Load the game session first
+      const session = await gameService.getGameSession(sessionId);
+      if (!session) {
+        throw new Error('Game session not found');
+      }
+
+      // Set the current session
+      dispatch({ type: 'SET_CURRENT_SESSION', payload: session });
+
+      // Resume the game and get the current question
+      const question = await gameService.resumeGame(sessionId);
+      dispatch({ type: 'SET_CURRENT_QUESTION', payload: question });
+      dispatch({ type: 'SET_GAME_STATUS', payload: 'playing' });
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERROR',
+        payload: error instanceof Error ? error.message : 'Failed to resume game'
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  // Abandon a paused game
+  const abandonGame = async (sessionId: string) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      // Update the game session status to completed (effectively abandoning it)
+      // and set end_time to mark when it was abandoned
+      await gameService.updateGameSession(sessionId, {
+        status: 'completed',
+        end_time: new Date().toISOString()
+      });
+
+      // Reload game history to reflect the change
+      if (state.userProfile?.id) {
+        const sessions = await gameService.getUserGameSessions(state.userProfile.id);
+        dispatch({ type: 'SET_GAME_HISTORY', payload: sessions });
+      }
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERROR',
+        payload: error instanceof Error ? error.message : 'Failed to abandon game'
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
   // Load game history
   const loadGameHistory = useCallback(async (userId: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -449,6 +508,8 @@ export function GameProvider({ children }: GameProviderProps) {
     submitAnswer,
     pauseGame,
     resumeGame,
+    resumePausedGame,
+    abandonGame,
     completeGame,
     loadGameHistory,
     resetGameState,

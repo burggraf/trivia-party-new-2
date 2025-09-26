@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PausedGameCard } from '@/components/game/PausedGameCard';
 import {
   Gamepad2,
   Trophy,
@@ -37,6 +38,11 @@ export function Dashboard() {
 
   const hasPlayedGames = (profile?.total_games_played || 0) > 0;
 
+  // Get paused games (up to 3 most recent)
+  const pausedGames = gameState.gameHistory
+    .filter(game => game.status === 'paused')
+    .slice(0, 3);
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       {gameState.error && (
@@ -61,6 +67,25 @@ export function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Paused Games Section */}
+      {pausedGames.length > 0 && (
+        <div className="space-y-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-amber-700 dark:text-amber-400">
+              Continue Playing
+            </h2>
+            <p className="text-muted-foreground">
+              You have {pausedGames.length} paused game{pausedGames.length > 1 ? 's' : ''} waiting for you
+            </p>
+          </div>
+          <div className="space-y-3">
+            {pausedGames.map((game) => (
+              <PausedGameCard key={game.id} game={game} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-center">

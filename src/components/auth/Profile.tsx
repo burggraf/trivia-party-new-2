@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
@@ -10,17 +11,20 @@ import {
   User,
   Trophy,
   Target,
-  Clock,
   Gamepad2,
   TrendingUp,
   Star,
   LogOut,
-  Loader2
+  Loader2,
+  Play,
+  Pause
 } from 'lucide-react';
 
 export function Profile() {
   const { state: authState, signOut } = useAuth();
-  const { state: gameState, loadUserProfile, loadGameHistory } = useGame();
+  const { state: gameState, loadUserProfile, loadGameHistory, resumePausedGame } = useGame();
+  const navigate = useNavigate();
+  const [resumingGameId, setResumingGameId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authState.user?.id) {
@@ -31,6 +35,18 @@ export function Profile() {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleResume = async (gameId: string) => {
+    setResumingGameId(gameId);
+    try {
+      await resumePausedGame(gameId);
+      navigate('/game/play');
+    } catch (error) {
+      console.error('Failed to resume game:', error);
+    } finally {
+      setResumingGameId(null);
+    }
   };
 
   if (gameState.loading && !gameState.userProfile) {
@@ -160,11 +176,18 @@ export function Profile() {
                 return (
                   <div key={game.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
-                      <div className={`w-3 h-3 rounded-full ${
-                        game.status === 'completed'
-                          ? gameAccuracy >= 70 ? 'bg-green-500' : 'bg-yellow-500'
-                          : 'bg-blue-500'
-                      }`} />
+                      <div className="relative">
+                        <div className={`w-3 h-3 rounded-full ${
+                          game.status === 'completed'
+                            ? gameAccuracy >= 70 ? 'bg-green-500' : 'bg-yellow-500'
+                            : game.status === 'paused'
+                            ? 'bg-amber-500'
+                            : 'bg-blue-500'
+                        }`} />
+                        {game.status === 'paused' && (
+                          <Pause className="w-3 h-3 text-amber-600 absolute -top-1 -right-1" />
+                        )}
+                      </div>
                       <div>
                         <p className="font-medium">
                           {game.total_rounds} rounds, {game.questions_per_round} questions each
@@ -174,20 +197,45 @@ export function Profile() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={game.status === 'completed' ? 'default' : 'secondary'}>
-                          {game.status}
-                        </Badge>
-                        {game.status === 'completed' && (
-                          <Badge variant="outline">
-                            {gameAccuracy}%
+                    <div className="flex items-center space-x-3">
+                      {game.status === 'paused' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleResume(game.id)}
+                          disabled={resumingGameId === game.id}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {resumingGameId === game.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                              Resuming...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4 mr-1" />
+                              Resume
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      <div className="text-right">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant={
+                            game.status === 'completed' ? 'default' :
+                            game.status === 'paused' ? 'secondary' : 'secondary'
+                          }>
+                            {game.status}
                           </Badge>
-                        )}
+                          {game.status === 'completed' && (
+                            <Badge variant="outline">
+                              {gameAccuracy}%
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Score: {game.total_score}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Score: {game.total_score}
-                      </p>
                     </div>
                   </div>
                 );
