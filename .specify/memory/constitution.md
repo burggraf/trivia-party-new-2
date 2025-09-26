@@ -1,8 +1,9 @@
 <!--
 Sync Impact Report:
-- Version change: none → 1.0.0
-- Modified principles: none (initial version)
-- Added sections: All core principles, Static Web Requirements, Development Workflow, Governance
+- Version change: 1.0.0 → 2.0.0
+- Modified principles: Replaced Static-First with Client-Server Architecture, Added Real-Time Multi-User Synchronization
+- Added sections: Architecture Requirements (replaced Static Web Requirements)
+- Updated tech stack: React 19+, Shadcn UI, Tailwind CSS 4+, Supabase with Realtime
 - Removed sections: none
 - Templates requiring updates:
   ✅ Updated plan-template.md (Constitution Check section)
@@ -15,10 +16,10 @@ Sync Impact Report:
 
 ## Core Principles
 
-### I. Static-First Architecture
-Every feature MUST be implementable as a static website with zero server-side dependencies. Use client-side JavaScript, static site generators, and CDN-hosted services only. No backend servers, databases, or server-side processing allowed.
+### I. Client-Server Architecture
+Every feature MUST be implemented as a React client-side application with Supabase backend services. Use React 19+, Shadcn UI components, Tailwind CSS 4+, and Supabase Client SDK with Realtime capabilities. Backend logic MUST remain simple and efficient through Supabase managed services.
 
-**Rationale**: Ensures maximum reliability, minimal hosting costs, and eliminates server maintenance overhead while maintaining full functionality through modern browser APIs and third-party static services.
+**Rationale**: Provides scalable multi-user functionality with real-time synchronization while maintaining simple backend architecture through Supabase managed services, ensuring reliable hosting and minimal server maintenance overhead.
 
 ### II. Code Quality Standards
 All code MUST pass linting, type checking, and formatting standards before commit. Use automated tools (ESLint, Prettier, TypeScript) with strict configurations. Zero warnings policy enforced.
@@ -35,19 +36,25 @@ All pages MUST load in under 2 seconds on 3G connections. Bundle sizes MUST be m
 
 **Rationale**: Modern web users expect fast experiences. Static sites have inherent performance advantages that must be preserved through disciplined optimization practices.
 
-### V. User Experience Consistency
+### V. Real-Time Multi-User Synchronization
+All multi-user features MUST utilize Supabase Realtime channels for state synchronization between game host, players, and display systems. Game state changes MUST propagate to all connected clients with minimal latency. Offline state MUST be handled gracefully with reconnection recovery.
+
+**Rationale**: Enables seamless multi-user trivia game experience where question data and scoring information flow efficiently from host to players and TV displays, maintaining consistent game state across all participants.
+
+### VI. User Experience Consistency
 UI components MUST follow established design system patterns. All interactions MUST provide immediate visual feedback. Error states MUST be handled gracefully with clear user guidance. Mobile-first responsive design mandatory.
 
 **Rationale**: Consistent user experience builds trust and reduces cognitive load. Clear feedback patterns prevent user confusion and improve overall satisfaction with the application.
 
-## Static Web Requirements
+## Architecture Requirements
 
-All features MUST comply with static-only architecture:
-- **Data Storage**: localStorage, sessionStorage, IndexedDB only
-- **External APIs**: CORS-enabled public APIs, CDN resources only
-- **Authentication**: OAuth flows with static redirect handling
-- **File Processing**: Client-side JavaScript libraries only
-- **Real-time Features**: WebRTC peer-to-peer, WebSocket clients to public services only
+All features MUST comply with client-server architecture:
+- **Frontend**: React 19+ SPA with Shadcn UI components and Tailwind CSS 4+
+- **Backend**: Supabase managed services (database, auth, storage, realtime)
+- **Data Storage**: Supabase PostgreSQL with row-level security policies
+- **Authentication**: Supabase Auth with secure session management
+- **Real-time Features**: Supabase Realtime channels for game state synchronization
+- **State Management**: Client-side React state with Supabase sync
 
 ## Development Workflow
 
@@ -75,4 +82,4 @@ This Constitution supersedes all other development practices and guidelines. All
 
 **Compliance Review**: Every feature specification and implementation plan MUST include a Constitution Check section documenting adherence to or justified deviation from these principles.
 
-**Version**: 1.0.0 | **Ratified**: 2025-09-25 | **Last Amended**: 2025-09-25
+**Version**: 2.0.0 | **Ratified**: 2025-09-25 | **Last Amended**: 2025-09-26

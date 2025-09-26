@@ -9,7 +9,7 @@
 1. Load feature spec from Input path
    → If not found: ERROR "No feature spec at {path}"
 2. Fill Technical Context (scan for NEEDS CLARIFICATION)
-   → Detect Project Type from context (web=frontend+backend, mobile=app+api)
+   → Detect Project Type from file system structure or context (web=frontend+backend, mobile=app+api)
    → Set Structure Decision based on project type
 3. Fill the Constitution Check section based on the content of the constitution document.
 4. Evaluate Constitution Check section below
@@ -47,30 +47,7 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-**Static-First Architecture**:
-- [ ] Feature uses only client-side technologies (no server dependencies)
-- [ ] Data storage limited to browser APIs (localStorage, IndexedDB, etc.)
-- [ ] External integrations via CORS-enabled public APIs only
-
-**Code Quality Standards**:
-- [ ] TypeScript strict mode configuration planned
-- [ ] ESLint, Prettier, and automated formatting tools configured
-- [ ] Zero warnings policy will be enforced
-
-**Test-Driven Development**:
-- [ ] Test-first approach planned for all business logic
-- [ ] Red-Green-Refactor cycle will be followed
-- [ ] 100% test coverage target for core functionality
-
-**Performance-First Design**:
-- [ ] Bundle size optimization strategy defined
-- [ ] Core Web Vitals targets identified (LCP < 2.5s, FID < 100ms, CLS < 0.1)
-- [ ] Performance monitoring approach planned
-
-**User Experience Consistency**:
-- [ ] Design system patterns will be followed
-- [ ] Mobile-first responsive design approach confirmed
-- [ ] Error handling and user feedback strategies defined
+[Gates determined based on constitution file]
 
 ## Project Structure
 
@@ -86,8 +63,14 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 ```
-# Option 1: Single project (DEFAULT)
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
 ├── models/
 ├── services/
@@ -99,7 +82,7 @@ tests/
 ├── integration/
 └── unit/
 
-# Option 2: Web application (when "frontend" + "backend" detected)
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
 ├── src/
 │   ├── models/
@@ -114,15 +97,16 @@ frontend/
 │   └── services/
 └── tests/
 
-# Option 3: Mobile + API (when "iOS/Android" detected)
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
 api/
 └── [same as backend above]
 
 ios/ or android/
-└── [platform-specific structure]
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: [DEFAULT to Option 1 unless Technical Context indicates web/mobile app]
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
@@ -232,4 +216,4 @@ ios/ or android/
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v1.0.0 - See `/memory/constitution.md`*
+*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
