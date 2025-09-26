@@ -78,10 +78,6 @@ export function QuestionDisplay() {
     );
   }
 
-  const progress = currentSession.total_rounds > 0
-    ? ((currentSession.current_round - 1) / currentSession.total_rounds) * 100
-    : 0;
-
   const questionProgress = currentSession.questions_per_round > 0
     ? ((currentSession.current_question_index + 1) / currentSession.questions_per_round) * 100
     : 0;

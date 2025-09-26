@@ -254,6 +254,7 @@ export function GameProvider({ children }: GameProviderProps) {
       dispatch({ type: 'SET_CURRENT_SESSION', payload: result.session });
       dispatch({ type: 'SET_CURRENT_QUESTION', payload: result.first_question });
       dispatch({ type: 'SET_GAME_STATUS', payload: 'playing' });
+      dispatch({ type: 'SET_SHOW_RESULT', payload: { show: false } });
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
@@ -499,6 +500,7 @@ export function GameProvider({ children }: GameProviderProps) {
   // Set current question directly
   const setCurrentQuestion = (question: QuestionPresentation) => {
     dispatch({ type: 'SET_CURRENT_QUESTION', payload: question });
+    dispatch({ type: 'SET_SHOW_RESULT', payload: { show: false } });
   };
 
   const contextValue: GameContextType = {

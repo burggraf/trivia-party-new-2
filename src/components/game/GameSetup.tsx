@@ -5,7 +5,6 @@ import { useGame } from '@/contexts/GameContext';
 import { gameService } from '@/services/game';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -31,7 +30,7 @@ import {
 export function GameSetup() {
   const navigate = useNavigate();
   const { state: authState } = useAuth();
-  const { state: gameState, loadAvailableCategories, createGameSession, startGame, createUserProfile, loadUserProfile, setCurrentSession, setCurrentQuestion } = useGame();
+  const { state: gameState, loadAvailableCategories, createUserProfile, loadUserProfile, setCurrentSession, setCurrentQuestion, resetGameState } = useGame();
 
   // Form state
   const [totalRounds, setTotalRounds] = useState(3);
@@ -65,6 +64,9 @@ export function GameSetup() {
 
   const handleStartGame = async () => {
     if (!authState.user?.id || !isValid) return;
+
+    // Reset any previous game state to ensure clean start
+    resetGameState();
 
     setIsCreating(true);
     try {
