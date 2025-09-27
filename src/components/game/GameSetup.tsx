@@ -34,7 +34,7 @@ export function GameSetup() {
 
   // Form state
   const [totalRounds, setTotalRounds] = useState(3);
-  const [questionsPerRound, setQuestionsPerRound] = useState(5);
+  const [questionsPerRound, setQuestionsPerRound] = useState(10);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -251,7 +251,7 @@ export function GameSetup() {
                       <SelectValue placeholder="Select questions" />
                     </SelectTrigger>
                     <SelectContent>
-                      {[3, 4, 5, 6, 7, 8, 9, 10, 12, 15].map((num) => (
+                      {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => (
                         <SelectItem key={num} value={num.toString()}>
                           {num} question{num > 1 ? 's' : ''}
                         </SelectItem>
