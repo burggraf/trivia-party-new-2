@@ -80,7 +80,7 @@ export function QuestionDisplay() {
   }
 
   const questionProgress = currentSession.questions_per_round > 0
-    ? ((currentSession.current_question_index + 1) / currentSession.questions_per_round) * 100
+    ? (((currentSession.current_question_index % currentSession.questions_per_round) + 1) / currentSession.questions_per_round) * 100
     : 0;
 
   return (
