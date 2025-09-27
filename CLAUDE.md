@@ -19,6 +19,7 @@ This is a React-based trivia game application with Supabase backend. The archite
 - `npm run dev` - Start development server
 - `npm run build` - Build for production (runs TypeScript check first)
 - `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build locally
 - `npm test` - Run unit tests (vitest)
 - `npm run test:watch` - Run unit tests in watch mode
 - `npm run test:e2e` - Run end-to-end tests (Playwright)
@@ -75,6 +76,46 @@ Vite is configured with path aliases:
 - `@/services` → `src/services`
 - `@/contexts` → `src/contexts`
 - `@/lib` → `src/lib`
+- `@/types` → `src/types`
+
+### Multi-User Game Architecture
+The application supports two distinct game modes:
+
+1. **Single-Player Mode** (legacy): Individual trivia sessions with personal scoring
+2. **Multi-User Mode** (current focus): Team-based trivia events with live gameplay
+
+**Multi-User Game Flow:**
+- **Host Creates Game** → Sets title, date, categories, rounds, questions per round
+- **Players Join Teams** → Teams have names, colors, and 1-4 players each
+- **Game Progression** → Host controls round progression, teams submit answers simultaneously
+- **Real-time Scoring** → Immediate feedback and live leaderboards
+
+**Key Multi-User Components:**
+- `gameService` implements both `GameService` (single-player) and `ExtendedGameService` (multi-user)
+- `GameContext` manages state with reducer pattern supporting both game modes
+- Database schema includes `games`, `teams`, `team_players`, `rounds`, `round_questions`, `team_answers`
+- RLS policies ensure hosts control their games and players access only their teams
+
+### Database Integration
+- **Schema Documentation**: See `DATABASE_SCHEMA.md` for complete table structure and relationships
+- **Local Development**: Supabase runs on ports 54321 (API) and 54322 (Database)
+- **Migrations**: Located in `supabase/migrations/` with sequential numbering
+- **Row Level Security**: Comprehensive RLS policies protect data access by user role
+
+### Contract Architecture
+TypeScript contracts are split across multiple files:
+- `src/contracts/game.ts` - Single-player game types and legacy service interface
+- `src/contracts/multi-user-types.ts` - Multi-user game entities and data structures
+- `src/contracts/multi-user-game.ts` - Extended service interface for team-based operations
+- `src/contracts/database.ts` - Edge function contracts (not currently used)
+
+### State Management Patterns
+The `GameContext` uses a reducer pattern with actions for:
+- Profile and session management
+- Multi-user game operations (create, join, start, progress)
+- Question display and answer submission
+- Loading states and error handling
+- Game flow transitions (setup → playing → completed)
 
 ## Important Notes
 - The project uses a simplified architecture without edge functions
@@ -82,3 +123,11 @@ Vite is configured with path aliases:
 - Error boundaries are extensively used throughout the component tree
 - TypeScript is strictly enforced with comprehensive type definitions
 - Game state is managed through a reducer pattern in GameContext
+- Database queries use RLS for security - ensure authenticated context for all operations
+- Multi-user games require careful state synchronization between teams
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
