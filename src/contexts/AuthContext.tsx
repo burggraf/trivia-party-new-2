@@ -2,11 +2,14 @@ import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { authService } from '@/services/auth';
 import type { AuthUser, AuthSession } from '@/contracts/auth';
+import type { UserRole, EnhancedUserProfile, RoleSelectionRequest, RoleSelectionResponse } from '@/contracts/host-management';
 
 // Auth State Types
 interface AuthState {
   user: AuthUser | null;
   session: AuthSession | null;
+  userRole: UserRole | null;
+  userProfile: EnhancedUserProfile | null;
   loading: boolean;
   initialized: boolean;
 }
@@ -16,7 +19,9 @@ type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_SESSION'; payload: { user: AuthUser | null; session: AuthSession | null } }
   | { type: 'CLEAR_SESSION' }
-  | { type: 'SET_INITIALIZED'; payload: boolean };
+  | { type: 'SET_INITIALIZED'; payload: boolean }
+  | { type: 'SET_USER_ROLE'; payload: UserRole | null }
+  | { type: 'SET_USER_PROFILE'; payload: EnhancedUserProfile | null };
 
 // Auth Context Interface
 interface AuthContextType {
@@ -25,12 +30,19 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<{ success: boolean; error?: string }>;
   refreshSession: () => Promise<void>;
+
+  // Role management
+  getUserRole: (userId: string) => Promise<UserRole | null>;
+  setUserRole: (request: RoleSelectionRequest) => Promise<RoleSelectionResponse>;
+  loadUserProfile: (userId: string) => Promise<void>;
 }
 
 // Initial state
 const initialState: AuthState = {
   user: null,
   session: null,
+  userRole: null,
+  userProfile: null,
   loading: true,
   initialized: false,
 };
@@ -52,10 +64,16 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         ...state,
         user: null,
         session: null,
+        userRole: null,
+        userProfile: null,
         loading: false,
       };
     case 'SET_INITIALIZED':
       return { ...state, initialized: action.payload };
+    case 'SET_USER_ROLE':
+      return { ...state, userRole: action.payload };
+    case 'SET_USER_PROFILE':
+      return { ...state, userProfile: action.payload };
     default:
       return state;
   }
@@ -94,6 +112,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 session: data.session
               }
             });
+
+            // Load user role and profile if user is authenticated
+            if (data.session?.user?.id) {
+              await loadUserProfile(data.session.user.id);
+            }
           }
           dispatch({ type: 'SET_INITIALIZED', payload: true });
         }
@@ -109,7 +132,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initializeAuth();
 
     // Set up auth state change listener
-    const { data } = authService.onAuthStateChange((event, session) => {
+    const { data } = authService.onAuthStateChange(async (event, session) => {
       if (mounted) {
         if (event === 'SIGNED_OUT' || !session) {
           dispatch({ type: 'CLEAR_SESSION' });
@@ -121,6 +144,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
               session: session
             }
           });
+
+          // Load user role and profile if user is authenticated
+          if (session.user?.id) {
+            await loadUserProfile(session.user.id);
+          }
         }
       }
     });
@@ -225,10 +253,67 @@ export function AuthProvider({ children }: AuthProviderProps) {
             session: data.session
           }
         });
+
+        // Load user role and profile if user is authenticated
+        if (data.session?.user?.id) {
+          await loadUserProfile(data.session.user.id);
+        }
       }
     } catch (error) {
       console.error('Error refreshing session:', error);
       dispatch({ type: 'CLEAR_SESSION' });
+    }
+  };
+
+  // Get user role
+  const getUserRole = async (userId: string): Promise<UserRole | null> => {
+    try {
+      const role = await authService.getUserRole(userId);
+      dispatch({ type: 'SET_USER_ROLE', payload: role });
+      return role;
+    } catch (error) {
+      console.error('Error getting user role:', error);
+      return null;
+    }
+  };
+
+  // Set user role
+  const setUserRole = async (request: RoleSelectionRequest): Promise<RoleSelectionResponse> => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+
+    try {
+      const response = await authService.setUserRole(request);
+
+      if (response.success) {
+        dispatch({ type: 'SET_USER_ROLE', payload: request.preferredRole });
+        dispatch({ type: 'SET_USER_PROFILE', payload: response.userProfile });
+      }
+
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to set user role';
+      return {
+        success: false,
+        userProfile: state.userProfile as any,
+        redirectPath: '/'
+      };
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  // Load user profile
+  const loadUserProfile = async (userId: string): Promise<void> => {
+    try {
+      const [role, profile] = await Promise.all([
+        authService.getUserRole(userId),
+        authService.getEnhancedUserProfile(userId)
+      ]);
+
+      dispatch({ type: 'SET_USER_ROLE', payload: role });
+      dispatch({ type: 'SET_USER_PROFILE', payload: profile });
+    } catch (error) {
+      console.error('Error loading user profile:', error);
     }
   };
 
@@ -238,6 +323,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signIn,
     signOut,
     refreshSession,
+    getUserRole,
+    setUserRole,
+    loadUserProfile,
   };
 
   return (

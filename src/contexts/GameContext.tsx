@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { gameService } from '@/services/game';
+import { hostGameService } from '@/services/hostGameService';
 import type {
   GameSession,
   UserProfile,
@@ -8,6 +9,12 @@ import type {
   GameSummary,
   CreateGameSessionRequest
 } from '@/contracts/game';
+import type {
+  Game,
+  CreateGameRequest,
+  UpdateGameRequest,
+  HostDashboardData
+} from '@/contracts/host-management';
 
 // Game State Types
 interface GameState {
@@ -39,6 +46,17 @@ interface GameState {
 
   // Available data
   availableCategories: string[];
+
+  // Host Management State
+  hostGames: Game[];
+  currentHostGame: Game | null;
+  hostDashboardData: HostDashboardData | null;
+
+  // Host Loading States
+  isCreatingGame: boolean;
+  isUpdatingGame: boolean;
+  isDeletingGame: boolean;
+  isLoadingHostData: boolean;
 }
 
 // Game Actions
@@ -55,7 +73,15 @@ type GameAction =
   | { type: 'SET_SHOW_RESULT'; payload: { show: boolean; correct?: boolean; correctAnswer?: string } }
   | { type: 'SET_GAME_SUMMARY'; payload: GameSummary | null }
   | { type: 'UPDATE_SESSION_SCORE'; payload: number }
-  | { type: 'RESET_GAME_STATE' };
+  | { type: 'RESET_GAME_STATE' }
+  // Host Management Actions
+  | { type: 'SET_HOST_GAMES'; payload: Game[] }
+  | { type: 'SET_CURRENT_HOST_GAME'; payload: Game | null }
+  | { type: 'SET_HOST_DASHBOARD_DATA'; payload: HostDashboardData | null }
+  | { type: 'SET_HOST_LOADING_STATE'; payload: { key: 'creating' | 'updating' | 'deleting' | 'loadingData'; value: boolean } }
+  | { type: 'ADD_HOST_GAME'; payload: Game }
+  | { type: 'UPDATE_HOST_GAME'; payload: Game }
+  | { type: 'REMOVE_HOST_GAME'; payload: string };
 
 // Game Context Interface
 interface GameContextType {
@@ -86,6 +112,16 @@ interface GameContextType {
   clearError: () => void;
   setCurrentSession: (session: GameSession) => void;
   setCurrentQuestion: (question: QuestionPresentation) => void;
+
+  // Host Management
+  loadHostGames: (userId: string) => Promise<void>;
+  loadHostDashboardData: (userId: string) => Promise<void>;
+  createHostGame: (gameData: CreateGameRequest) => Promise<Game>;
+  updateHostGame: (gameId: string, updates: UpdateGameRequest) => Promise<Game>;
+  deleteHostGame: (gameId: string) => Promise<void>;
+  archiveHostGame: (gameId: string) => Promise<void>;
+  setCurrentHostGame: (game: Game | null) => void;
+  refreshHostData: (userId: string) => Promise<void>;
 }
 
 // Initial state
@@ -103,6 +139,15 @@ const initialState: GameState = {
   lastAnswerCorrect: null,
   lastCorrectAnswer: null,
   availableCategories: [],
+  // Host Management State
+  hostGames: [],
+  currentHostGame: null,
+  hostDashboardData: null,
+  // Host Loading States
+  isCreatingGame: false,
+  isUpdatingGame: false,
+  isDeletingGame: false,
+  isLoadingHostData: false,
 };
 
 // Game reducer
@@ -147,7 +192,45 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...initialState,
         userProfile: state.userProfile,
         availableCategories: state.availableCategories,
-        gameHistory: state.gameHistory
+        gameHistory: state.gameHistory,
+        // Preserve host state when resetting player game state
+        hostGames: state.hostGames,
+        currentHostGame: state.currentHostGame,
+        hostDashboardData: state.hostDashboardData
+      };
+    // Host Management Actions
+    case 'SET_HOST_GAMES':
+      return { ...state, hostGames: action.payload };
+    case 'SET_CURRENT_HOST_GAME':
+      return { ...state, currentHostGame: action.payload };
+    case 'SET_HOST_DASHBOARD_DATA':
+      return { ...state, hostDashboardData: action.payload };
+    case 'SET_HOST_LOADING_STATE':
+      const { key, value } = action.payload;
+      const loadingStateKey = key === 'creating' ? 'isCreatingGame'
+        : key === 'updating' ? 'isUpdatingGame'
+        : key === 'deleting' ? 'isDeletingGame'
+        : 'isLoadingHostData';
+      return { ...state, [loadingStateKey]: value };
+    case 'ADD_HOST_GAME':
+      return { ...state, hostGames: [action.payload, ...state.hostGames] };
+    case 'UPDATE_HOST_GAME':
+      return {
+        ...state,
+        hostGames: state.hostGames.map(game =>
+          game.id === action.payload.id ? action.payload : game
+        ),
+        currentHostGame: state.currentHostGame?.id === action.payload.id
+          ? action.payload
+          : state.currentHostGame
+      };
+    case 'REMOVE_HOST_GAME':
+      return {
+        ...state,
+        hostGames: state.hostGames.filter(game => game.id !== action.payload),
+        currentHostGame: state.currentHostGame?.id === action.payload
+          ? null
+          : state.currentHostGame
       };
     default:
       return state;
@@ -503,6 +586,148 @@ export function GameProvider({ children }: GameProviderProps) {
     dispatch({ type: 'SET_SHOW_RESULT', payload: { show: false } });
   };
 
+  // Host Management Functions
+  const loadHostGames = useCallback(async (userId: string) => {
+    dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'loadingData', value: true } });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      const gamesResponse = await hostGameService.getHostGames(userId);
+      dispatch({ type: 'SET_HOST_GAMES', payload: gamesResponse.games });
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERROR',
+        payload: error instanceof Error ? error.message : 'Failed to load host games'
+      });
+    } finally {
+      dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'loadingData', value: false } });
+    }
+  }, []);
+
+  const loadHostDashboardData = useCallback(async (userId: string) => {
+    dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'loadingData', value: true } });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      const dashboardData = await hostGameService.getHostDashboard(userId);
+      dispatch({ type: 'SET_HOST_DASHBOARD_DATA', payload: dashboardData });
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERROR',
+        payload: error instanceof Error ? error.message : 'Failed to load dashboard data'
+      });
+    } finally {
+      dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'loadingData', value: false } });
+    }
+  }, []);
+
+  const createHostGame = useCallback(async (gameData: CreateGameRequest): Promise<Game> => {
+    dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'creating', value: true } });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      const newGame = await hostGameService.createGame(gameData);
+      dispatch({ type: 'ADD_HOST_GAME', payload: newGame });
+
+      // Refresh dashboard data to update stats
+      if (gameData.host_id) {
+        await loadHostDashboardData(gameData.host_id);
+      }
+
+      return newGame;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create game';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'creating', value: false } });
+    }
+  }, [loadHostDashboardData]);
+
+  const updateHostGame = useCallback(async (gameId: string, updates: UpdateGameRequest): Promise<Game> => {
+    dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'updating', value: true } });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      const updatedGame = await hostGameService.updateGame({ gameId, updates });
+      dispatch({ type: 'UPDATE_HOST_GAME', payload: updatedGame });
+      return updatedGame;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update game';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'updating', value: false } });
+    }
+  }, []);
+
+  const deleteHostGame = useCallback(async (gameId: string): Promise<void> => {
+    dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'deleting', value: true } });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      const hostId = state.userProfile?.id;
+      if (!hostId) {
+        throw new Error('User profile not loaded');
+      }
+
+      await hostGameService.deleteGame({ gameId, hostId });
+      dispatch({ type: 'REMOVE_HOST_GAME', payload: gameId });
+
+      // Refresh dashboard data to update stats
+      await loadHostDashboardData(hostId);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete game';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'deleting', value: false } });
+    }
+  }, [state.userProfile?.id, loadHostDashboardData]);
+
+  const archiveHostGame = useCallback(async (gameId: string): Promise<void> => {
+    dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'updating', value: true } });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      const hostId = state.userProfile?.id;
+      if (!hostId) {
+        throw new Error('User profile not loaded');
+      }
+
+      await hostGameService.archiveGame({ gameId, hostId });
+
+      // Update the local game to reflect archived status
+      const updatedGame = state.hostGames.find(g => g.id === gameId);
+      if (updatedGame) {
+        dispatch({
+          type: 'UPDATE_HOST_GAME',
+          payload: { ...updatedGame, archived: true }
+        });
+      }
+
+      // Refresh dashboard data to update stats
+      await loadHostDashboardData(hostId);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to archive game';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_HOST_LOADING_STATE', payload: { key: 'updating', value: false } });
+    }
+  }, [state.userProfile?.id, state.hostGames, loadHostDashboardData]);
+
+  const setCurrentHostGame = useCallback((game: Game | null) => {
+    dispatch({ type: 'SET_CURRENT_HOST_GAME', payload: game });
+  }, []);
+
+  const refreshHostData = useCallback(async (userId: string) => {
+    await Promise.all([
+      loadHostGames(userId),
+      loadHostDashboardData(userId)
+    ]);
+  }, [loadHostGames, loadHostDashboardData]);
+
   const contextValue: GameContextType = {
     state,
     loadUserProfile,
@@ -521,6 +746,15 @@ export function GameProvider({ children }: GameProviderProps) {
     clearError,
     setCurrentSession,
     setCurrentQuestion,
+    // Host Management
+    loadHostGames,
+    loadHostDashboardData,
+    createHostGame,
+    updateHostGame,
+    deleteHostGame,
+    archiveHostGame,
+    setCurrentHostGame,
+    refreshHostData,
   };
 
   return (

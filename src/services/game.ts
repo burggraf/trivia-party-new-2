@@ -30,6 +30,18 @@ import type {
   GameSummaryResponse,
   GameStatus,
 } from '@/contracts/multi-user-types';
+import type {
+  QuestionGenerationRequest,
+  QuestionGenerationResponse,
+  QuestionPreviewRequest,
+  QuestionPreviewResponse,
+  ReplaceQuestionRequest,
+  QuestionAssignment,
+  UpdateTeamRequest,
+  TeamManagementResponse,
+  AddPlayerToTeamRequest,
+  RemovePlayerFromTeamRequest
+} from '@/contracts/host-management';
 
 class GameServiceImpl implements ExtendedGameService {
   // Profile Management
@@ -161,6 +173,162 @@ class GameServiceImpl implements ExtendedGameService {
     }
   }
 
+  // === Host Question Generation Methods ===
+
+  async generateQuestions(request: QuestionGenerationRequest): Promise<QuestionGenerationResponse> {
+    try {
+      // Get already used questions for this host
+      const { data: usedQuestions, error: usedError } = await supabase
+        .from('host_used_questions')
+        .select('question_id')
+        .eq('host_id', request.hostId);
+
+      if (usedError) {
+        throw new Error(`Failed to get used questions: ${usedError.message}`);
+      }
+
+      const usedQuestionIds = usedQuestions.map(q => q.question_id);
+
+      // Get available questions from selected categories
+      let query = supabase
+        .from('questions')
+        .select('*')
+        .in('category', request.categories)
+        .limit(request.count * 2); // Get more than needed to account for filtering
+
+      if (usedQuestionIds.length > 0) {
+        query = query.not('id', 'in', `(${usedQuestionIds.join(',')})`);
+      }
+
+      const { data: questions, error: questionsError } = await query;
+
+      if (questionsError) {
+        throw new Error(`Failed to generate questions: ${questionsError.message}`);
+      }
+
+      if (!questions || questions.length < request.count) {
+        throw new Error(`Not enough unused questions available. Found ${questions?.length || 0}, need ${request.count}`);
+      }
+
+      // Randomly select the required number of questions
+      const selectedQuestions = this.shuffleArray(questions).slice(0, request.count);
+
+      // Mark questions as used
+      const usedRecords = selectedQuestions.map(q => ({
+        host_id: request.hostId,
+        question_id: q.id
+      }));
+
+      const { error: markUsedError } = await supabase
+        .from('host_used_questions')
+        .insert(usedRecords);
+
+      if (markUsedError) {
+        console.warn('Failed to mark questions as used:', markUsedError.message);
+        // Don't throw error here as questions were still generated successfully
+      }
+
+      return {
+        questions: selectedQuestions.map(q => this.mapToQuestion(q)),
+        totalAvailable: questions.length,
+        remainingUnused: questions.length - request.count
+      };
+    } catch (error) {
+      console.error('Error generating questions:', error);
+      throw new Error(`Failed to generate questions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getQuestionPreview(request: QuestionPreviewRequest): Promise<QuestionPreviewResponse> {
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('id', request.questionId)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to get question preview: ${error.message}`);
+      }
+
+      // Check if question is already used by this host
+      const { data: usedCheck } = await supabase
+        .from('host_used_questions')
+        .select('id')
+        .eq('host_id', request.hostId)
+        .eq('question_id', request.questionId)
+        .single();
+
+      return {
+        question: this.mapToQuestion(data),
+        isAlreadyUsed: !!usedCheck
+      };
+    } catch (error) {
+      console.error('Error getting question preview:', error);
+      throw new Error(`Failed to get question preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async replaceQuestion(request: ReplaceQuestionRequest): Promise<QuestionAssignment> {
+    try {
+      // Get the current question assignment
+      const { data: currentAssignment, error: assignmentError } = await supabase
+        .from('round_questions')
+        .select(`
+          *,
+          question:questions(*)
+        `)
+        .eq('id', request.questionAssignmentId)
+        .single();
+
+      if (assignmentError || !currentAssignment?.question) {
+        throw new Error('Current question assignment not found');
+      }
+
+      const category = currentAssignment.question.category;
+
+      // Generate a replacement question from the same category
+      const replacementResponse = await this.generateQuestions({
+        hostId: request.hostId,
+        categories: [category],
+        count: 1
+      });
+
+      if (replacementResponse.questions.length === 0) {
+        throw new Error('No replacement questions available');
+      }
+
+      const newQuestion = replacementResponse.questions[0];
+
+      // Update the round question assignment
+      const { data, error } = await supabase
+        .from('round_questions')
+        .update({ question_id: newQuestion.id })
+        .eq('id', request.questionAssignmentId)
+        .select(`
+          *,
+          question:questions(*)
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to replace question: ${error.message}`);
+      }
+
+      return {
+        id: data.id,
+        roundId: data.round_id,
+        questionId: data.question_id,
+        questionOrder: data.question_order,
+        question: this.mapToQuestion(data.question),
+        revealedAt: data.revealed_at
+      };
+    } catch (error) {
+      console.error('Error replacing question:', error);
+      throw new Error(`Failed to replace question: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   // Game Session Management
   async createGameSession(userId: string, request: CreateGameSessionRequest): Promise<GameSession> {
     try {
@@ -230,7 +398,12 @@ class GameServiceImpl implements ExtendedGameService {
       const { data, error } = await query;
 
       if (error) {
-        console.error('Error fetching user game sessions:', error);
+        // Handle known database schema issues gracefully
+        if (error.code === 'PGRST205' && error.message?.includes('game_sessions')) {
+          console.warn('Game sessions table not found - database migrations may not be applied yet');
+        } else {
+          console.error('Error fetching user game sessions:', error);
+        }
         // For any error, return empty array gracefully
         // This handles 406 errors and other access issues
         return [];
@@ -931,6 +1104,182 @@ class GameServiceImpl implements ExtendedGameService {
     }
   }
 
+  // === Host Team Management Methods ===
+
+  async updateTeam(request: UpdateTeamRequest): Promise<TeamManagementResponse> {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .update({
+          name: request.name,
+          display_color: request.display_color
+        })
+        .eq('id', request.teamId)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update team: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        team: data,
+        message: `Team "${request.name}" updated successfully`
+      };
+    } catch (error) {
+      console.error('Error updating team:', error);
+      throw new Error(`Failed to update team: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async deleteTeam(teamId: string, hostId: string): Promise<void> {
+    try {
+      // Verify the team belongs to a game hosted by this user
+      const { data: team, error: teamError } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          game:games!inner(host_id)
+        `)
+        .eq('id', teamId)
+        .eq('games.host_id', hostId)
+        .single();
+
+      if (teamError || !team) {
+        throw new Error('Team not found or you do not have permission to delete it');
+      }
+
+      // Delete the team (cascade will handle team_players)
+      const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', teamId);
+
+      if (error) {
+        throw new Error(`Failed to delete team: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      throw new Error(`Failed to delete team: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async addPlayerToTeam(request: AddPlayerToTeamRequest): Promise<TeamManagementResponse> {
+    try {
+      // Check if player is already in a team for this game
+      const { data: team } = await supabase
+        .from('teams')
+        .select('game_id')
+        .eq('id', request.teamId)
+        .single();
+
+      if (!team) {
+        throw new Error('Team not found');
+      }
+
+      const existingTeam = await this.getPlayerTeam(team.game_id, request.playerId);
+      if (existingTeam) {
+        throw new Error('Player is already in a team for this game');
+      }
+
+      // Check team size limit
+      const gameTeams = await this.getGameTeams(team.game_id);
+      const targetTeam = gameTeams.find(t => t.id === request.teamId);
+      if (targetTeam && targetTeam.players.length >= 4) {
+        throw new Error('Team is full (maximum 4 players per team)');
+      }
+
+      const { data, error } = await supabase
+        .from('team_players')
+        .insert({
+          team_id: request.teamId,
+          user_id: request.playerId
+        })
+        .select(`
+          *,
+          team:teams(*),
+          user:user_profiles(*)
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to add player to team: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        team: data.team,
+        message: `Player added to team successfully`
+      };
+    } catch (error) {
+      console.error('Error adding player to team:', error);
+      throw new Error(`Failed to add player to team: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async removePlayerFromTeam(request: RemovePlayerFromTeamRequest): Promise<TeamManagementResponse> {
+    try {
+      const { error } = await supabase
+        .from('team_players')
+        .delete()
+        .eq('team_id', request.teamId)
+        .eq('user_id', request.playerId);
+
+      if (error) {
+        throw new Error(`Failed to remove player from team: ${error.message}`);
+      }
+
+      // Get updated team info
+      const { data: team } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('id', request.teamId)
+        .single();
+
+      return {
+        success: true,
+        team: team,
+        message: `Player removed from team successfully`
+      };
+    } catch (error) {
+      console.error('Error removing player from team:', error);
+      throw new Error(`Failed to remove player from team: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getHostGameTeams(gameId: string, hostId: string): Promise<Team[]> {
+    try {
+      // First verify the host owns this game
+      const { data: game, error: gameError } = await supabase
+        .from('games')
+        .select('id')
+        .eq('id', gameId)
+        .eq('host_id', hostId)
+        .single();
+
+      if (gameError || !game) {
+        throw new Error('Game not found or you do not have permission to view it');
+      }
+
+      // Get teams for the game
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at');
+
+      if (teamsError) {
+        throw teamsError;
+      }
+
+      return teams || [];
+    } catch (error) {
+      console.error('Error getting host game teams:', error);
+      throw new Error(`Failed to get game teams: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async getGameTeams(gameId: string): Promise<TeamWithPlayers[]> {
     try {
       const { data: teams, error: teamsError } = await supabase
@@ -1503,9 +1852,6 @@ class GameServiceImpl implements ExtendedGameService {
     }
   }
 
-  async assignQuestionsToRound(roundId: string, questionIds: string[]): Promise<void> {
-    throw new Error('Not implemented yet - will be implemented in T015');
-  }
 
   subscribeToGameUpdates(gameId: string, callback: (update: GameStateUpdate) => void): () => void {
     throw new Error('Not implemented yet - real-time subscriptions to be added later');
@@ -1579,6 +1925,32 @@ class GameServiceImpl implements ExtendedGameService {
     }>;
   }> {
     throw new Error('Not implemented yet - analytics to be added later');
+  }
+
+  // === Helper Methods ===
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  private mapToQuestion(data: any): any {
+    return {
+      id: data.id,
+      category: data.category,
+      question: data.question,
+      a: data.a,
+      b: data.b,
+      c: data.c,
+      d: data.d,
+      metadata: data.metadata || {},
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   }
 }
 

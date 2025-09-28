@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PausedGameCard } from '@/components/game/PausedGameCard';
+import { RoleSelection } from '@/components/auth/RoleSelection';
 import {
   Gamepad2,
   Trophy,
@@ -20,8 +21,9 @@ import {
 } from 'lucide-react';
 
 export function Dashboard() {
-  const { state: authState } = useAuth();
+  const { state: authState, setUserRole } = useAuth();
   const { state: gameState, loadUserProfile, loadGameHistory } = useGame();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (authState.user?.id) {
@@ -29,6 +31,52 @@ export function Dashboard() {
       loadGameHistory(authState.user.id);
     }
   }, [authState.user?.id, loadUserProfile, loadGameHistory]);
+
+  // Handle role selection for first-time users
+  const handleRoleSelection = async (role: 'host' | 'player', redirectPath: string) => {
+    if (!authState.user?.id) return;
+
+    try {
+      const response = await setUserRole({
+        userId: authState.user.id,
+        preferredRole: role
+      });
+
+      if (response.success) {
+        // Navigate to the appropriate dashboard based on role
+        navigate(redirectPath);
+      }
+    } catch (error) {
+      console.error('Failed to set user role:', error);
+    }
+  };
+
+  // Show role selection if user hasn't selected a role yet
+  if (authState.initialized && authState.user && !authState.userRole) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <RoleSelection
+          userId={authState.user.id}
+          onRoleSelected={handleRoleSelection}
+        />
+      </div>
+    );
+  }
+
+  // Redirect to host dashboard if user is a host
+  useEffect(() => {
+    if (authState.userRole === 'host') {
+      navigate('/host/dashboard');
+    }
+  }, [authState.userRole, navigate]);
+
+  if (authState.userRole === 'host') {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
 
   const profile = gameState.userProfile;
   const recentGames = gameState.gameHistory.slice(0, 3);
