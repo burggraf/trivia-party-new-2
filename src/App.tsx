@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
@@ -179,21 +179,34 @@ function HostDashboardWrapper() {
 function GameWizardWrapper() {
   const { state: authState } = useAuth();
   const { createHostGame } = useGame();
+  const navigate = useNavigate();
 
   const handleGameCreate = async (gameData: any) => {
-    if (!authState.user?.id) {
-      throw new Error('User not authenticated');
-    }
+    try {
+      console.log('handleGameCreate called with:', gameData);
+      if (!authState.user?.id) {
+        throw new Error('User not authenticated');
+      }
 
-    return await createHostGame({
-      ...gameData,
-      host_id: authState.user.id
-    });
+      const result = await createHostGame({
+        ...gameData,
+        host_id: authState.user.id
+      });
+      console.log('Game created successfully:', result);
+
+      // Navigate to host dashboard after successful creation
+      navigate('/host/dashboard');
+
+      return result;
+    } catch (error) {
+      console.error('Error creating game:', error);
+      throw error;
+    }
   };
 
   return (
     <GameWizard
-      onGameCreate={handleGameCreate}
+      onComplete={handleGameCreate}
       userId={authState.user?.id || ''}
     />
   );

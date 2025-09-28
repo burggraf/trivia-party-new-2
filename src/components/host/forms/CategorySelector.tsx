@@ -10,75 +10,75 @@ import { GAME_VALIDATION_CONSTANTS, validateCategorySelection } from '@/lib/vali
 
 // Category metadata with icons and descriptions
 const CATEGORY_METADATA = {
-  science: {
-    icon: FlaskConical,
-    label: 'Science',
-    description: 'Physics, chemistry, biology, and scientific discoveries',
-    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    questionCount: 150,
+  'Arts & Literature': {
+    icon: Palette,
+    label: 'Arts & Literature',
+    description: 'Visual arts, music, theater, books, authors, and literary works',
+    color: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
+    questionCount: 1000,
   },
-  history: {
-    icon: BookOpen,
-    label: 'History',
-    description: 'World history, historical figures, and important events',
-    color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-    questionCount: 200,
-  },
-  sports: {
-    icon: Dumbbell,
-    label: 'Sports',
-    description: 'Sports facts, athletes, records, and competitions',
-    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    questionCount: 180,
-  },
-  entertainment: {
+  'Entertainment': {
     icon: Film,
     label: 'Entertainment',
     description: 'Movies, TV shows, music, and celebrity culture',
     color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    questionCount: 220,
+    questionCount: 1000,
   },
-  geography: {
+  'Food and Drink': {
+    icon: Leaf,
+    label: 'Food and Drink',
+    description: 'Cuisine, cooking, beverages, and culinary traditions',
+    color: 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200',
+    questionCount: 1000,
+  },
+  'General Knowledge': {
+    icon: Info,
+    label: 'General Knowledge',
+    description: 'Mixed topics, trivia, and general facts',
+    color: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
+    questionCount: 1000,
+  },
+  'Geography': {
     icon: Globe,
     label: 'Geography',
     description: 'Countries, capitals, landmarks, and world geography',
     color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
-    questionCount: 170,
+    questionCount: 1000,
   },
-  literature: {
+  'History': {
     icon: BookOpen,
-    label: 'Literature',
-    description: 'Books, authors, poetry, and literary works',
-    color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-    questionCount: 140,
+    label: 'History',
+    description: 'World history, historical figures, and important events',
+    color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+    questionCount: 1000,
   },
-  arts: {
-    icon: Palette,
-    label: 'Arts',
-    description: 'Visual arts, music, theater, and cultural movements',
-    color: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
-    questionCount: 120,
+  'Pop Culture': {
+    icon: Film,
+    label: 'Pop Culture',
+    description: 'Trends, celebrities, social media, and contemporary culture',
+    color: 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200',
+    questionCount: 1000,
   },
-  technology: {
+  'Science': {
+    icon: FlaskConical,
+    label: 'Science',
+    description: 'Physics, chemistry, biology, and scientific discoveries',
+    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    questionCount: 1000,
+  },
+  'Sports': {
+    icon: Dumbbell,
+    label: 'Sports',
+    description: 'Sports facts, athletes, records, and competitions',
+    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    questionCount: 1000,
+  },
+  'Technology': {
     icon: Cpu,
     label: 'Technology',
     description: 'Computing, internet, gadgets, and tech innovations',
     color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-    questionCount: 160,
-  },
-  nature: {
-    icon: Leaf,
-    label: 'Nature',
-    description: 'Animals, plants, environment, and natural phenomena',
-    color: 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200',
-    questionCount: 130,
-  },
-  politics: {
-    icon: Building2,
-    label: 'Politics',
-    description: 'Government, political figures, and political systems',
-    color: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
-    questionCount: 110,
+    questionCount: 1000,
   },
 } as const;
 

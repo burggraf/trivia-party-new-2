@@ -24,16 +24,16 @@ const dateString = z.string()
 // === Category validation ===
 
 const AVAILABLE_CATEGORIES = [
-  'science',
-  'history',
-  'sports',
-  'entertainment',
-  'geography',
-  'literature',
-  'arts',
-  'technology',
-  'nature',
-  'politics'
+  'Arts & Literature',
+  'Entertainment',
+  'Food and Drink',
+  'General Knowledge',
+  'Geography',
+  'History',
+  'Pop Culture',
+  'Science',
+  'Sports',
+  'Technology'
 ] as const;
 
 const categoriesArray = z.array(z.enum(AVAILABLE_CATEGORIES))

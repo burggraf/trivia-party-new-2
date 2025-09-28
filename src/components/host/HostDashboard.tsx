@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -94,9 +95,11 @@ export const HostDashboard = memo(function HostDashboard({ userId, dashboardData
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            New Game
+          <Button asChild size="sm">
+            <Link to="/host/games/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Game
+            </Link>
           </Button>
         </div>
       </header>

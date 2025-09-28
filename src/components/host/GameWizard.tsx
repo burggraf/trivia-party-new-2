@@ -114,8 +114,12 @@ export const GameWizard = memo(function GameWizard({
   };
 
   const handleComplete = () => {
+    console.log('handleComplete called', { isLastStep, canGoNext, gameData: state.gameData });
     if (isLastStep && canGoNext) {
+      console.log('Calling onComplete with gameData:', state.gameData);
       onComplete(state.gameData as GameConfiguration);
+    } else {
+      console.log('Not calling onComplete because:', { isLastStep, canGoNext });
     }
   };
 
@@ -210,7 +214,7 @@ export const GameWizard = memo(function GameWizard({
             <h2 className="text-xl font-semibold">Question Generation</h2>
             <div data-testid="category-selection" className="space-y-2">
               <label className="block text-sm font-medium mb-2">Select Categories</label>
-              {['science', 'history', 'sports', 'entertainment'].map(category => (
+              {['Arts & Literature', 'Entertainment', 'Food and Drink', 'General Knowledge', 'Geography', 'History', 'Pop Culture', 'Science', 'Sports', 'Technology'].map(category => (
                 <label
                   key={category}
                   data-testid={`category-${category}`}

@@ -14,12 +14,16 @@ interface QuestionGenerationStepProps {
 }
 
 const AVAILABLE_CATEGORIES = [
-  { id: 'science', label: 'Science', color: 'bg-blue-100 text-blue-800' },
-  { id: 'history', label: 'History', color: 'bg-purple-100 text-purple-800' },
-  { id: 'sports', label: 'Sports', color: 'bg-orange-100 text-orange-800' },
-  { id: 'entertainment', label: 'Entertainment', color: 'bg-pink-100 text-pink-800' },
-  { id: 'geography', label: 'Geography', color: 'bg-green-100 text-green-800' },
-  { id: 'literature', label: 'Literature', color: 'bg-indigo-100 text-indigo-800' }
+  { id: 'Arts & Literature', label: 'Arts & Literature', color: 'bg-pink-100 text-pink-800' },
+  { id: 'Entertainment', label: 'Entertainment', color: 'bg-purple-100 text-purple-800' },
+  { id: 'Food and Drink', label: 'Food and Drink', color: 'bg-lime-100 text-lime-800' },
+  { id: 'General Knowledge', label: 'General Knowledge', color: 'bg-slate-100 text-slate-800' },
+  { id: 'Geography', label: 'Geography', color: 'bg-emerald-100 text-emerald-800' },
+  { id: 'History', label: 'History', color: 'bg-amber-100 text-amber-800' },
+  { id: 'Pop Culture', label: 'Pop Culture', color: 'bg-rose-100 text-rose-800' },
+  { id: 'Science', label: 'Science', color: 'bg-blue-100 text-blue-800' },
+  { id: 'Sports', label: 'Sports', color: 'bg-green-100 text-green-800' },
+  { id: 'Technology', label: 'Technology', color: 'bg-gray-100 text-gray-800' }
 ];
 
 export function QuestionGenerationStep({
